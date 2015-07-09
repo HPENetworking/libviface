@@ -110,7 +110,7 @@ class VIface
          * format of the IPv4 address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
          *
-         * @param[in]  mac New IPv4 address for this virtual interface in the
+         * @param[in]  ipv4 New IPv4 address for this virtual interface in the
          *             form "172.17.42.1".
          *
          * @return always void.
@@ -133,7 +133,7 @@ class VIface
          * format of the IPv4 address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
          *
-         * @param[in]  mac New IPv6 address for this virtual interface in the
+         * @param[in]  ipv6 New IPv6 address for this virtual interface in the
          *             form "2001:0DB8:AC10:FE01::".
          *
          * @return always void.
@@ -156,7 +156,7 @@ class VIface
          * range of the MTU is verified, but is just until up() is called that
          * the library will try to attempt to write it.
          *
-         * @param[in]  mac New MTU for this virtual interface.
+         * @param[in]  mtu New MTU for this virtual interface.
          *
          * @return always void.
          *         An exception is thrown in case of bad range MTU.
