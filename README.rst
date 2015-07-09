@@ -8,7 +8,7 @@ Dependencies
 
 ::
 
-   sudo apt-get install build-essential cmake libtins-dev doxygen graphviz
+   sudo apt-get install build-essential cmake doxygen graphviz
 
 
 Build

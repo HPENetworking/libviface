@@ -37,12 +37,6 @@ namespace viface {
  */
 #define VIFACE_VERSION "@libviface_VERSION_STRING@"
 
-/**
- * @def VIFACE_LIBTINS_SUPPORT
- * Set if libviface is to be built with support for libtins.
- */
-#cmakedefine VIFACE_LIBTINS_SUPPORT
-
 /** @} */ // End of libviface_private_config
 };
 

@@ -11,9 +11,6 @@ set_target_properties(
 
 # Link the library code all together
 target_link_libraries(${LIB_NAME})
-if(VIFACE_LIBTINS_SUPPORT)
-    target_link_libraries(${LIB_NAME} tins)
-endif(VIFACE_LIBTINS_SUPPORT)
 
 # Specify shared library install directory
 install(TARGETS ${LIB_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR})

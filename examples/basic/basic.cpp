@@ -1,3 +1,4 @@
+#include <iostream>
 #include "viface/viface.hpp"
 
 using namespace std;

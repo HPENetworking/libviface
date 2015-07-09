@@ -9,7 +9,6 @@ set(libviface_VERSION_STRING "0.1.0-dev")
 # Setup project variables
 set(VIFACE_TESTS ON CACHE BOOL "Enable compilation of unit tests.")
 set(VIFACE_EXAMPLES ON CACHE BOOL "Enable compilation of the examples.")
-set(VIFACE_LIBTINS_SUPPORT ON CACHE BOOL "Build with support for libtins.")
 set(VIFACE_FORCE_32BITS OFF CACHE BOOL "Force library compilation for 32 bits.")
 
 # Force C++11 compiler

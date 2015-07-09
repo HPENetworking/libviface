@@ -1,6 +1,6 @@
-set(EXEC_NAME "vifacetest")
+set(EXEC_NAME "tests")
 
-# Allow the linker to found the library
+# Allow to use libviface
 include_directories (
     ${libviface_SOURCE_DIR}/include
 )
@@ -8,7 +8,7 @@ link_directories(
     ${libviface_SOURCE_DIR}/${LIB_NAME}
 )
 
-# Add source to the executable.
+# Add source to the executable
 add_executable(
     ${EXEC_NAME}
     create.cpp

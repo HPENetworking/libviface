@@ -27,12 +27,9 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "viface/config.hpp"
-
-#ifdef VIFACE_LIBTINS_SUPPORT
-#include "tins/tins.h"
-#endif
 
 namespace viface
 {
