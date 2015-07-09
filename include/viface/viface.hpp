@@ -186,20 +186,13 @@ class VIface
          *
          * Note: Receive a packet from a virtual interface means that another
          * userspace program (or the kernel) sent a packet to the network
-         * interface with the name of the instance of this class.
-         *
-         * @param[in]  timeout Operation timeout. If timeout < 0, wait
-         *             indefinitely; if timeout == 0 do not block and return
-         *             immediately, in such case, the vector will be empty if
-         *             no packet were available. Finally, if timeout > 0 wait
-         *             up to that amount of milliseconds has passed. In this
-         *             case, if the operation timed-out, the vector will also
-         *             be empty.
+         * interface with the name of the instance of this class. If not packet
+         * was available, and empty vector is returned.
          *
          * @return the packet (if tun) or frame (if tap) as a binary blob
          *         (array of bytes).
          */
-        std::vector<uint8_t> receive(int timeout = 0) const;
+        std::vector<uint8_t> receive();
 
         /**
          * Send a packet from this virtual interface.

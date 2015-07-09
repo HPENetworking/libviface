@@ -38,7 +38,6 @@ static bool parse_mac(vector<uint8_t>& out, string const& in)
     return true;
 }
 
-
 static void read_flags(int sockfd, string name, struct ifreq* ifr)
 {
     ostringstream what;
@@ -57,7 +56,6 @@ static void read_flags(int sockfd, string name, struct ifreq* ifr)
         throw runtime_error(what.str());
     }
 }
-
 
 static string alloc_viface(string name, bool tap, viface_queues_t* queues)
 {
@@ -282,7 +280,7 @@ void VIfaceImpl::setMTU(uint mtu)
     }
 
     // Are we sure about this upper validation?
-    // lo interface reports this number for it's MTU
+    // lo interface reports this number for its MTU
     if (mtu > 65536) {
         what << "--- MTU " << mtu << " too large (> 65536)." << endl;
         throw invalid_argument(what.str());
@@ -422,16 +420,63 @@ bool VIfaceImpl::isUp() const
     return (ifr.ifr_flags & IFF_UP) != 0;
 }
 
-vector<uint8_t> VIfaceImpl::receive(int timeout) const
+vector<uint8_t> VIfaceImpl::receive()
 {
-    // FIXME: Implement!
-    vector<uint8_t> packet;
+    // Read packet into our buffer
+    int nread = read(this->queues.rx, &(this->pktbuff[0]), this->mtu);
+
+    // Handle errors
+    if (nread == -1) {
+        // Nothing was read for this fd (non-blocking).
+        // This could happen, as http://linux.die.net/man/2/select states:
+        //
+        //    Under Linux, select() may report a socket file descriptor as
+        //    "ready for reading", while nevertheless a subsequent read
+        //    blocks. This could for example happen when data has arrived
+        //    but upon examination has wrong checksum and is discarded.
+        //    There may be other circumstances in which a file descriptor
+        //    is spuriously reported as ready. Thus it may be safer to
+        //    use O_NONBLOCK on sockets that should not block.
+        //
+        // I know this is not a socket, but the "There may be other
+        // circumstances in which a file descriptor is spuriously reported
+        // as ready" warns it, and so, it better to do this that to have
+        // an application that frozes for no apparent reason.
+        //
+        if (errno == EAGAIN)
+        {
+            return vector<uint8_t>(0);
+        }
+
+        // Something bad happened
+        ostringstream what;
+        what << "--- IO error while reading from " << this->name;
+        what << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Copy packet from buffer and return
+    vector<uint8_t> packet(nread);
+    packet.assign(&(this->pktbuff[0]), &(this->pktbuff[nread - 1]));
     return packet;
 }
 
 void VIfaceImpl::send(vector<uint8_t>& packet) const
 {
-    // FIXME: Implement!
+    // Write packet to TX queue
+    int size = packet.size();
+    int written = write(this->queues.tx, &packet[0], size);
+
+    if (written != size) {
+        ostringstream what;
+        what << "--- IO error while writting to " << this->name;
+        what << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
     return;
 }
 
@@ -508,9 +553,9 @@ bool VIface::isUp() const
     return this->pimpl->isUp();
 }
 
-vector<uint8_t> VIface::receive(int timeout) const
+vector<uint8_t> VIface::receive()
 {
-    return this->pimpl->receive(timeout);
+    return this->pimpl->receive();
 }
 
 void VIface::send(vector<uint8_t>& packet) const

@@ -104,7 +104,7 @@ class VIfaceImpl
 
         bool isUp() const;
 
-        vector<uint8_t> receive(int timeout) const;
+        vector<uint8_t> receive();
 
         void send(vector<uint8_t>& packet) const;
 };
