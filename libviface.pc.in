@@ -1,0 +1,10 @@
+prefix=@pkgconfig_prefix@
+exec_prefix=@pkgconfig_exec_prefix@
+libdir=@pkgconfig_libdir@
+includedir=${prefix}/include
+
+Name: libviface
+Description: libviface C++ bindings for C Linux tun/tap Interface.
+Version: @pkgconfig_version@
+Libs: -L${libdir} -lviface
+Cflags: -I${includedir}
