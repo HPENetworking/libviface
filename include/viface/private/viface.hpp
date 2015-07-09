@@ -59,6 +59,8 @@ class VIfaceImpl
 
         viface_queues_t queues;
         int kernel_socket;
+        vector<uint8_t> pktbuff;
+
         string name;
         uint id;
         string mac;
@@ -82,31 +84,31 @@ class VIfaceImpl
             return this->id;
         }
 
-        void setMac(std::string mac);
+        void setMac(string mac);
 
-        std::string getMac() const;
+        string getMac() const;
 
-        void setIPv4(std::string ipv4);
+        void setIPv4(string ipv4);
 
-        std::string getIPv4() const;
+        string getIPv4() const;
 
-        void setIPv6(std::string ipv6);
+        void setIPv6(string ipv6);
 
-        std::string getIPv6() const;
+        string getIPv6() const;
 
         void setMTU(uint mtu);
 
         uint getMTU() const;
 
-        void up() const;
+        void up();
 
         void down() const;
 
         bool isUp() const;
 
-        std::vector<uint8_t> receive(int timeout) const;
+        vector<uint8_t> receive(int timeout) const;
 
-        void send(std::vector<uint8_t>& packet) const;
+        void send(vector<uint8_t>& packet) const;
 };
 };
 #endif // _VIFACE_PRIV_HPP

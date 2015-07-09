@@ -22,7 +22,8 @@ namespace viface
 
 /*= Helpers ==================================================================*/
 
-static void read_flags(int sockfd, string name, struct ifreq* ifr) {
+static void read_flags(int sockfd, string name, struct ifreq* ifr)
+{
     ostringstream what;
 
     // Prepare communication structure
@@ -201,8 +202,24 @@ string VIfaceImpl::getIPv6() const
 
 void VIfaceImpl::setMTU(uint mtu)
 {
-    // FIXME: Implement!
+    ostringstream what;
+
+    // RFC 791, p. 24: "Every internet module must be able to forward a
+    // datagram of 68 octets without further fragmentation."
+    if (mtu < 68) {
+        what << "--- MTU " << mtu << " too small (< 68)." << endl;
+        throw invalid_argument(what.str());
+    }
+
+    // Are we sure about this upper validation?
+    // lo interface reports this number for it's MTU
+    if (mtu > 65536) {
+        what << "--- MTU " << mtu << " too large (> 65536)." << endl;
+        throw invalid_argument(what.str());
+    }
+
     this->mtu = mtu;
+
     return;
 }
 
@@ -212,9 +229,16 @@ uint VIfaceImpl::getMTU() const
     return 0;
 }
 
-void VIfaceImpl::up() const
+void VIfaceImpl::up()
 {
     ostringstream what;
+
+    if (this->isUp()) {
+        what << "--- Virtual interface " << this->name;
+        what << " is already up." << endl;
+        what << "    up() Operation not permitted." << endl;
+        throw runtime_error(what.str());
+    }
 
     // Read interface flags
     struct ifreq ifr;
@@ -230,6 +254,7 @@ void VIfaceImpl::up() const
         what << " (" << errno << ")." << endl;
         throw runtime_error(what.str());
     }
+    this->pktbuff.resize(this->mtu);
 
     // Bring-up interface
     ifr.ifr_flags |= IFF_UP;
@@ -360,7 +385,7 @@ uint VIface::getMTU() const
     return this->pimpl->getMTU();
 }
 
-void VIface::up() const
+void VIface::up()
 {
     return this->pimpl->up();
 }

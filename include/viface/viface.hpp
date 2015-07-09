@@ -83,8 +83,7 @@ class VIface
         /**
          * Set the MAC address of the virtual interface.
          *
-         * You need to down the interface first to change this. Also, the
-         * format of the MAC address is verified, but is just until up()
+         * The format of the MAC address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
          * If you don't provide a MAC address (the default) one will be
          * automatically assigned when bringing up the interface.
@@ -108,8 +107,7 @@ class VIface
         /**
          * Set the IPv4 address of the virtual interface.
          *
-         * You need to down the interface first to change this. Also, the
-         * format of the IPv4 address is verified, but is just until up()
+         * The format of the IPv4 address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
          *
          * @param[in]  ipv4 New IPv4 address for this virtual interface in the
@@ -131,8 +129,7 @@ class VIface
         /**
          * Set the IPv6 address of the virtual interface.
          *
-         * You need to down the interface first to change this. Also, the
-         * format of the IPv4 address is verified, but is just until up()
+         * The format of the IPv4 address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
          * If you don't provide a IPv6 address (the default) one may be
          * automatically assigned when bringing up the interface
@@ -157,9 +154,8 @@ class VIface
         /**
          * Set the MTU of the virtual interface.
          *
-         * You need to down the interface first to change this. Also, the
-         * range of the MTU is verified, but is just until up() is called that
-         * the library will try to attempt to write it.
+         * The range of the MTU is verified, but is just until up() is called
+         * that the library will try to attempt to write it.
          *
          * @param[in]  mtu New MTU for this virtual interface.
          *
@@ -188,7 +184,7 @@ class VIface
          *         Exceptions are thrown in case of configuration or bring-up
          *         failures.
          */
-        void up() const;
+        void up();
 
         /**
          * Bring down the virtual interface.
