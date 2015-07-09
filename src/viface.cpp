@@ -19,29 +19,118 @@
 
 namespace viface
 {
+
+/*= Helpers ==================================================================*/
+
+static string alloc_viface(string name, bool tap, viface_queues_t* queues)
+{
+    int i = 0;
+    int fd = 0;
+    ostringstream what;
+
+    /* Create structure for ioctl call
+     *
+     * Flags: IFF_TAP   - TAP device (layer 2, ethernet frame)
+     *        IFF_TUN   - TUN device (layer 3, IP packet)
+     *        IFF_NO_PI - Do not provide packet information
+     *        IFF_MULTI_QUEUE - Create a queue of multiqueue device
+     */
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+
+    ifr.ifr_flags = IFF_NO_PI | IFF_MULTI_QUEUE;
+    if (tap) {
+        ifr.ifr_flags |= IFF_TAP;
+    } else {
+        ifr.ifr_flags |= IFF_TUN;
+    }
+
+    (void) strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
+
+    // Allocate queues
+    for (i = 0; i < 2; i++)
+    {
+        // Open TUN/TAP device
+        fd = open("/dev/net/tun", O_RDWR | O_NONBLOCK);
+        if (fd < 0)
+        {
+            what << "--- Unable to open TUN/TAP device." << endl;
+            what << "    Name: " << name << " Queue: " << i << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            goto err;
+       }
+
+       // Register a network device with the kernel
+       if (ioctl(fd, TUNSETIFF, (void *)&ifr) != 0)
+       {
+            what << "--- Unable to register a TUN/TAP device." << endl;
+            what << "    Name: " << name << " Queue: " << i << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+
+            if (close(fd) < 0)
+            {
+                what << "--- Unable to close a TUN/TAP device." << endl;
+                what << "    Name: " << name << " Queue: " << i << endl;
+                what << "    Error: " << strerror(errno);
+                what << " (" << errno << ")." << endl;
+            }
+            goto err;
+        }
+
+        ((int *)queues)[i] = fd;
+    }
+
+    return string(ifr.ifr_name);
+
+err:
+    // Rollback close file descriptors
+    for (--i; i >= 0; i--)
+    {
+        if (close(((int *)queues)[i]) < 0)
+        {
+            what << "--- Unable to close a TUN/TAP device." << endl;
+            what << "    Name: " << name << " Queue: " << i << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+        }
+    }
+
+    throw runtime_error(what.str());
+}
+
+
+/*= Virtual Interface Implementation =========================================*/
+
 uint VIfaceImpl::idseq = 0;
 
 VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
 {
-    // Set name
-    this->name = name;
-
-    // Set tap
-    this->tap = tap;
-
     // Set id
     if (id < 0) {
         this->id = this->idseq;
     } else {
         this->id = id;
     }
-
     this->idseq++;
+
+    // Check name length
+    if (name.length() >= IFNAMSIZ) {
+        throw invalid_argument("Virtual interface name too long.");
+    }
+
+    // Create queues and assign name
+    viface_queues_t queues;
+    memset(&queues, 0, sizeof(viface_queues_t));
+    this->name = alloc_viface(name, tap, &queues);
+    this->queues = queues;
 }
 
 void VIfaceImpl::setMac(string mac)
 {
     // FIXME: Implement!
+    this->mac = mac;
     return;
 }
 
@@ -54,6 +143,7 @@ string VIfaceImpl::getMac() const
 void VIfaceImpl::setIPv4(string ipv4)
 {
     // FIXME: Implement!
+    this->ipv4 = ipv4;
     return;
 }
 
@@ -66,6 +156,7 @@ string VIfaceImpl::getIPv4() const
 void VIfaceImpl::setIPv6(string ipv6)
 {
     // FIXME: Implement!
+    this->ipv6 = ipv6;
     return;
 }
 
@@ -78,6 +169,7 @@ string VIfaceImpl::getIPv6() const
 void VIfaceImpl::setMTU(uint mtu)
 {
     // FIXME: Implement!
+    this->mtu = mtu;
     return;
 }
 
@@ -130,7 +222,13 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
 
 VIface::VIface(string name, bool tap, int id) :
     pimpl(new VIfaceImpl(name, tap, id))
-{}
+{
+    // Set default values
+    this->setMac();
+    this->setIPv4();
+    this->setIPv6();
+    this->setMTU();
+}
 VIface::~VIface() = default;
 
 string VIface::getName() const {

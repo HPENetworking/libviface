@@ -19,8 +19,24 @@
 #define _VIFACE_PRIV_HPP
 
 // Standard
-//#include <stdexcept>
-//#include <sstream>
+#include <stdexcept>
+#include <sstream>
+
+// C
+#include <cstring>   // memset
+#include <cerrno>    // EAGAIN
+
+// Posix
+#include <unistd.h>  // open(), close()
+#include <fcntl.h>   // O_RDWR
+
+// Linux TUN/TAP includes
+#include <sys/select.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <linux/if.h>
+#include <linux/if_tun.h>
+#include <linux/if_arp.h>
 
 // Framework
 #include "viface/viface.hpp"
@@ -30,12 +46,19 @@ using namespace viface;
 
 namespace viface
 {
+
+typedef struct
+{
+   int  rx;
+   int  tx;
+} viface_queues_t;
+
 class VIfaceImpl
 {
     private:
 
+        viface_queues_t queues;
         string name;
-        bool tap;
         uint id;
         string mac;
         string ipv4;
