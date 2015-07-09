@@ -280,24 +280,6 @@ string VIfaceImpl::getIPv4() const
     return string(addr);
 }
 
-void VIfaceImpl::setIPv6(string ipv6)
-{
-        // Ignore non-set IPv6 address
-    if (ipv6.length() == 0) {
-        return;
-    }
-
-    // FIXME: Validate IPv6 address format
-    this->ipv6 = ipv6;
-    return;
-}
-
-string VIfaceImpl::getIPv6() const
-{
-    // FIXME: Implement!
-    return "";
-}
-
 void VIfaceImpl::setMTU(uint mtu)
 {
     ostringstream what;
@@ -485,7 +467,6 @@ VIface::VIface(string name, bool tap, int id) :
     // Set default values
     this->setMAC();
     this->setIPv4();
-    this->setIPv6();
     this->setMTU();
 }
 VIface::~VIface() = default;
@@ -516,16 +497,6 @@ void VIface::setIPv4(string ipv4)
 string VIface::getIPv4() const
 {
     return this->pimpl->getIPv4();
-}
-
-void VIface::setIPv6(string ipv6)
-{
-    return this->pimpl->setIPv6(ipv6);
-}
-
-string VIface::getIPv6() const
-{
-    return this->pimpl->getIPv6();
 }
 
 void VIface::setMTU(uint mtu)

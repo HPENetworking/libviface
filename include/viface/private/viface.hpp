@@ -69,7 +69,6 @@ class VIfaceImpl
         uint id;
         string mac;
         string ipv4;
-        string ipv6;
         uint mtu;
 
         static uint idseq;
@@ -95,10 +94,6 @@ class VIfaceImpl
         void setIPv4(string ipv4);
 
         string getIPv4() const;
-
-        void setIPv6(string ipv6);
-
-        string getIPv6() const;
 
         void setMTU(uint mtu);
 

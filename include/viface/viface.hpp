@@ -127,31 +127,6 @@ class VIface
         std::string getIPv4() const;
 
         /**
-         * Set the IPv6 address of the virtual interface.
-         *
-         * The format of the IPv4 address is verified, but is just until up()
-         * is called that the library will try to attempt to write it.
-         * If you don't provide a IPv6 address (the default) one may be
-         * automatically assigned when bringing up the interface
-         * (depending on your system configuration).
-         *
-         * @param[in]  ipv6 New IPv6 address for this virtual interface in the
-         *             form "2001:0DB8:AC10:FE01::".
-         *
-         * @return always void.
-         *         An exception is thrown in case of malformed argument.
-         */
-        void setIPv6(std::string ipv6 = "");
-
-        /**
-         * Getter method for virtual interface associated IPv6 Address.
-         *
-         * @return the current IPv6 address of the virtual interface.
-         *         An empty string means no associated IPv6 address.
-         */
-        std::string getIPv6() const;
-
-        /**
          * Set the MTU of the virtual interface.
          *
          * The range of the MTU is verified, but is just until up() is called
