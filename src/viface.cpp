@@ -38,18 +38,18 @@ static bool parse_mac(vector<uint8_t>& out, string const& in)
     return true;
 }
 
-static void read_flags(int sockfd, string name, struct ifreq* ifr)
+static void read_flags(int sockfd, string name, struct ifreq& ifr)
 {
     ostringstream what;
 
     // Prepare communication structure
-    memset(ifr, 0, sizeof(struct ifreq));
+    memset(&ifr, 0, sizeof(struct ifreq));
 
     // Set interface name
-    (void) strncpy(ifr->ifr_name, name.c_str(), IFNAMSIZ - 1);
+    (void) strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
 
     // Read interface flags
-    if (ioctl(sockfd, SIOCGIFFLAGS, ifr) != 0) {
+    if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) != 0) {
         what << "--- Unable to read " << name << " flags." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -194,7 +194,7 @@ string VIfaceImpl::getMAC() const
 
     // Read interface flags
     struct ifreq ifr;
-    read_flags(this->kernel_socket, this->name, &ifr);
+    read_flags(this->kernel_socket, this->name, ifr);
 
     if (ioctl(this->kernel_socket, SIOCGIFHWADDR, &ifr) != 0) {
         what << "--- Unable to get MAC addr for " << this->name << "." << endl;
@@ -244,7 +244,7 @@ string VIfaceImpl::getIPv4() const
 
     // Read interface flags
     struct ifreq ifr;
-    read_flags(this->kernel_socket, this->name, &ifr);
+    read_flags(this->kernel_socket, this->name, ifr);
 
     if (ioctl(this->kernel_socket, SIOCGIFADDR, &ifr) != 0) {
         what << "--- Unable to get IPv4 for " << this->name << "." << endl;
@@ -297,7 +297,7 @@ uint VIfaceImpl::getMTU() const
 
     // Read interface flags
     struct ifreq ifr;
-    read_flags(this->kernel_socket, this->name, &ifr);
+    read_flags(this->kernel_socket, this->name, ifr);
 
     if (ioctl(this->kernel_socket, SIOCGIFMTU, &ifr) != 0) {
         what << "--- Unable to get MTU for " << this->name << "." << endl;
@@ -322,7 +322,7 @@ void VIfaceImpl::up()
 
     // Read interface flags
     struct ifreq ifr;
-    read_flags(this->kernel_socket, this->name, &ifr);
+    read_flags(this->kernel_socket, this->name, ifr);
 
     // Set MAC address
     vector<uint8_t> mac_bin(6);
@@ -394,7 +394,7 @@ void VIfaceImpl::down() const
 
     // Read interface flags
     struct ifreq ifr;
-    read_flags(this->kernel_socket, this->name, &ifr);
+    read_flags(this->kernel_socket, this->name, ifr);
 
     // Bring-down interface
     ifr.ifr_flags &= ~IFF_UP;
@@ -415,7 +415,7 @@ bool VIfaceImpl::isUp() const
 
     // Read interface flags
     struct ifreq ifr;
-    read_flags(this->kernel_socket, this->name, &ifr);
+    read_flags(this->kernel_socket, this->name, ifr);
 
     return (ifr.ifr_flags & IFF_UP) != 0;
 }
