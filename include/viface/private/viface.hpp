@@ -23,12 +23,15 @@
 #include <sstream>
 
 // C
-#include <cstring>   // memset
-#include <cerrno>    // EAGAIN
+#include <cstring>     // memset
+#include <cerrno>      // EAGAIN
 
 // Posix
-#include <unistd.h>  // open(), close()
-#include <fcntl.h>   // O_RDWR
+#include <unistd.h>    // open(), close()
+#include <fcntl.h>     // O_RDWR
+
+// Network
+#include <arpa/inet.h> // inet_ntop()
 
 // Linux TUN/TAP includes
 #include <sys/select.h>

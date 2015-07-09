@@ -160,7 +160,8 @@ class VIface
          * @param[in]  mtu New MTU for this virtual interface.
          *
          * @return always void.
-         *         An exception is thrown in case of bad range MTU.
+         *         An exception is thrown in case of bad range MTU
+         *         ([68, 65536]).
          */
         void setMTU(uint mtu = 1500);
 

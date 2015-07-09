@@ -163,7 +163,12 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
 
 void VIfaceImpl::setMac(string mac)
 {
-    // FIXME: Implement!
+    // Ignore non-set MAC address
+    if (mac.length() == 0) {
+        return;
+    }
+
+    // FIXME: Validate MAC address format
     this->mac = mac;
     return;
 }
@@ -176,20 +181,66 @@ string VIfaceImpl::getMac() const
 
 void VIfaceImpl::setIPv4(string ipv4)
 {
-    // FIXME: Implement!
+    ostringstream what;
+
+    // Ignore non-set IPv4 address
+    if (ipv4.length() == 0) {
+        return;
+    }
+
+    // Validate format
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(struct ifreq));
+    struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
+    if (!inet_pton(AF_INET, ipv4.c_str(), &addr->sin_addr)) {
+        what << "--- Invalid IPv4 address (" << ipv4 << ") for ";
+        what << this->name << "." << endl;
+        throw invalid_argument(what.str());
+    }
+
     this->ipv4 = ipv4;
     return;
 }
 
 string VIfaceImpl::getIPv4() const
 {
-    // FIXME: Implement!
-    return "";
+    ostringstream what;
+
+    // Read interface flags
+    struct ifreq ifr;
+    read_flags(this->kernel_socket, this->name, &ifr);
+
+    if (ioctl(this->kernel_socket, SIOCGIFADDR, &ifr) != 0)
+    {
+        what << "--- Unable to get IPv4 for " << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Convert binary IP address to string
+    char addr[INET_ADDRSTRLEN];
+    memset(&addr, 0, sizeof(addr));
+
+    struct sockaddr_in* ipaddr = (struct sockaddr_in*) &ifr.ifr_addr;
+    if (inet_ntop(AF_INET, &(ipaddr->sin_addr), addr, sizeof(addr)) == NULL) {
+        what << "--- Unable to convert IPv4 for " << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    return string(addr);
 }
 
 void VIfaceImpl::setIPv6(string ipv6)
 {
-    // FIXME: Implement!
+        // Ignore non-set IPv6 address
+    if (ipv6.length() == 0) {
+        return;
+    }
+
+    // FIXME: Validate IPv6 address format
     this->ipv6 = ipv6;
     return;
 }
@@ -225,8 +276,21 @@ void VIfaceImpl::setMTU(uint mtu)
 
 uint VIfaceImpl::getMTU() const
 {
-    // FIXME: Implement!
-    return 0;
+    ostringstream what;
+
+    // Read interface flags
+    struct ifreq ifr;
+    read_flags(this->kernel_socket, this->name, &ifr);
+
+    if (ioctl(this->kernel_socket, SIOCGIFMTU, &ifr) != 0)
+    {
+        what << "--- Unable to get MTU for " << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    return ifr.ifr_mtu;
 }
 
 void VIfaceImpl::up()
@@ -244,11 +308,31 @@ void VIfaceImpl::up()
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, &ifr);
 
+    // Set IPv4
+    struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
+
+    addr->sin_family = AF_INET;
+    if (!inet_pton(AF_INET, this->ipv4.c_str(), &addr->sin_addr)) {
+        what << "--- Invalid cached IPv4 address (" << this->ipv4 << ") for ";
+        what << this->name << "." << endl;
+        what << "    Something really bad happened :/" << endl;
+        throw runtime_error(what.str());
+    }
+
+    if (ioctl(this->kernel_socket, SIOCSIFADDR, &ifr) != 0)
+    {
+        what << "--- Unable to set IPv4 (" << this->ipv4 << ") for ";
+        what << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
     // Set MTU
     ifr.ifr_mtu = this->mtu;
     if (ioctl(this->kernel_socket, SIOCSIFMTU, &ifr) != 0)
     {
-        what << "--- Unable to set MTU (" << this->getMTU() << ") for ";
+        what << "--- Unable to set MTU (" << this->mtu << ") for ";
         what << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
