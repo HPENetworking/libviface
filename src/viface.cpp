@@ -19,7 +19,6 @@
 
 namespace viface
 {
-
 /*= Helpers ==================================================================*/
 
 static bool parse_mac(vector<uint8_t>& out, string const& in)
@@ -29,7 +28,7 @@ static bool parse_mac(vector<uint8_t>& out, string const& in)
         in.c_str(),
         "%02x:%02x:%02x:%02x:%02x:%02x",
         &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]
-    );
+        );
 
     if (scans != 6) {
         return false;
@@ -38,6 +37,7 @@ static bool parse_mac(vector<uint8_t>& out, string const& in)
     out.assign(&bytes[0], &bytes[6]);
     return true;
 }
+
 
 static void read_flags(int sockfd, string name, struct ifreq* ifr)
 {
@@ -50,8 +50,7 @@ static void read_flags(int sockfd, string name, struct ifreq* ifr)
     (void) strncpy(ifr->ifr_name, name.c_str(), IFNAMSIZ - 1);
 
     // Read interface flags
-    if (ioctl(sockfd, SIOCGIFFLAGS, ifr) != 0)
-    {
+    if (ioctl(sockfd, SIOCGIFFLAGS, ifr) != 0) {
         what << "--- Unable to read " << name << " flags." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -86,29 +85,25 @@ static string alloc_viface(string name, bool tap, viface_queues_t* queues)
     (void) strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
 
     // Allocate queues
-    for (i = 0; i < 2; i++)
-    {
+    for (i = 0; i < 2; i++) {
         // Open TUN/TAP device
         fd = open("/dev/net/tun", O_RDWR | O_NONBLOCK);
-        if (fd < 0)
-        {
+        if (fd < 0) {
             what << "--- Unable to open TUN/TAP device." << endl;
             what << "    Name: " << name << " Queue: " << i << endl;
             what << "    Error: " << strerror(errno);
             what << " (" << errno << ")." << endl;
             goto err;
-       }
+        }
 
-       // Register a network device with the kernel
-       if (ioctl(fd, TUNSETIFF, (void *)&ifr) != 0)
-       {
+        // Register a network device with the kernel
+        if (ioctl(fd, TUNSETIFF, (void *)&ifr) != 0) {
             what << "--- Unable to register a TUN/TAP device." << endl;
             what << "    Name: " << name << " Queue: " << i << endl;
             what << "    Error: " << strerror(errno);
             what << " (" << errno << ")." << endl;
 
-            if (close(fd) < 0)
-            {
+            if (close(fd) < 0) {
                 what << "--- Unable to close a TUN/TAP device." << endl;
                 what << "    Name: " << name << " Queue: " << i << endl;
                 what << "    Error: " << strerror(errno);
@@ -124,10 +119,8 @@ static string alloc_viface(string name, bool tap, viface_queues_t* queues)
 
 err:
     // Rollback close file descriptors
-    for (--i; i >= 0; i--)
-    {
-        if (close(((int *)queues)[i]) < 0)
-        {
+    for (--i; i >= 0; i--) {
+        if (close(((int *)queues)[i]) < 0) {
             what << "--- Unable to close a TUN/TAP device." << endl;
             what << "    Name: " << name << " Queue: " << i << endl;
             what << "    Error: " << strerror(errno);
@@ -164,11 +157,10 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
     this->name = alloc_viface(name, tap, &queues);
     this->queues = queues;
 
-   // Create socket channel to the NET kernel for later ioctl
+    // Create socket channel to the NET kernel for later ioctl
     this->kernel_socket = -1;
     this->kernel_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (this->kernel_socket < 0)
-    {
+    if (this->kernel_socket < 0) {
         ostringstream what;
         what << "--- Unable to create socket channel to the NET kernel.";
         what << endl;
@@ -206,8 +198,7 @@ string VIfaceImpl::getMAC() const
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, &ifr);
 
-    if (ioctl(this->kernel_socket, SIOCGIFHWADDR, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCGIFHWADDR, &ifr) != 0) {
         what << "--- Unable to get MAC addr for " << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -217,7 +208,7 @@ string VIfaceImpl::getMAC() const
     // Convert binary MAC address to string
     ostringstream addr;
     addr << hex << std::setfill('0');
-    for (int i = 0 ; i < 6; i++) {
+    for (int i = 0; i < 6; i++) {
         addr << setw(2) << (unsigned int) (0xFF & ifr.ifr_hwaddr.sa_data[i]);
         if (i != 5) {
             addr << ":";
@@ -257,8 +248,7 @@ string VIfaceImpl::getIPv4() const
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, &ifr);
 
-    if (ioctl(this->kernel_socket, SIOCGIFADDR, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCGIFADDR, &ifr) != 0) {
         what << "--- Unable to get IPv4 for " << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -311,8 +301,7 @@ uint VIfaceImpl::getMTU() const
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, &ifr);
 
-    if (ioctl(this->kernel_socket, SIOCGIFMTU, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCGIFMTU, &ifr) != 0) {
         what << "--- Unable to get MTU for " << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -350,8 +339,7 @@ void VIfaceImpl::up()
     for (int i = 0; i < 6; i++) {
         ifr.ifr_hwaddr.sa_data[i] = mac_bin[i];
     }
-    if (ioctl(this->kernel_socket, SIOCSIFHWADDR, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCSIFHWADDR, &ifr) != 0) {
         what << "--- Unable to set MAC Address (" << this->mac << ") for ";
         what << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
@@ -370,8 +358,7 @@ void VIfaceImpl::up()
         throw runtime_error(what.str());
     }
 
-    if (ioctl(this->kernel_socket, SIOCSIFADDR, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCSIFADDR, &ifr) != 0) {
         what << "--- Unable to set IPv4 (" << this->ipv4 << ") for ";
         what << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
@@ -381,8 +368,7 @@ void VIfaceImpl::up()
 
     // Set MTU
     ifr.ifr_mtu = this->mtu;
-    if (ioctl(this->kernel_socket, SIOCSIFMTU, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCSIFMTU, &ifr) != 0) {
         what << "--- Unable to set MTU (" << this->mtu << ") for ";
         what << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
@@ -393,8 +379,7 @@ void VIfaceImpl::up()
 
     // Bring-up interface
     ifr.ifr_flags |= IFF_UP;
-    if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
         what << "--- Unable to bring-up interface " << this->name;
         what << "." << endl;
         what << "    Error: " << strerror(errno);
@@ -415,8 +400,7 @@ void VIfaceImpl::down() const
 
     // Bring-down interface
     ifr.ifr_flags &= ~IFF_UP;
-    if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0)
-    {
+    if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
         what << "--- Unable to bring-down interface " << this->name;
         what << "." << endl;
         what << "    Error: " << strerror(errno);

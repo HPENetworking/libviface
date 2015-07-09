@@ -50,11 +50,10 @@ using namespace viface;
 
 namespace viface
 {
-
 typedef struct
 {
-   int  rx;
-   int  tx;
+    int rx;
+    int tx;
 } viface_queues_t;
 
 class VIfaceImpl
