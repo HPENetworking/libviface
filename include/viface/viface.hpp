@@ -94,7 +94,7 @@ class VIface
          * @return always void.
          *         An exception is thrown in case of malformed argument.
          */
-        void setMac(std::string mac = "");
+        void setMAC(std::string mac = "");
 
         /**
          * Getter method for virtual interface associated MAC Address.
@@ -102,7 +102,7 @@ class VIface
          * @return the current MAC address of the virtual interface.
          *         An empty string means no associated MAC address.
          */
-        std::string getMac() const;
+        std::string getMAC() const;
 
         /**
          * Set the IPv4 address of the virtual interface.

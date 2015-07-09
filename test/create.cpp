@@ -6,6 +6,7 @@
 TEST_CASE("Create")
 {
     std::string name = "viface%d";
+    std::string mac = "66:23:2d:28:c6:84";
     std::string ipv4 = "192.168.20.21";
 
     viface::VIface iface(name);
@@ -15,6 +16,7 @@ TEST_CASE("Create")
 
     // Configure interface
     REQUIRE_NOTHROW(iface.setIPv4(ipv4));
+    REQUIRE_NOTHROW(iface.setMAC(mac));
 
     // Bring-up interface
     REQUIRE_NOTHROW(iface.up());
@@ -22,5 +24,6 @@ TEST_CASE("Create")
 
     // Check parameters
     REQUIRE(iface.getMTU() == 1500);
+    REQUIRE(iface.getMAC() == mac);
     REQUIRE(iface.getIPv4() == ipv4);
 }

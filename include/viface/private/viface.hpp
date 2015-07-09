@@ -21,6 +21,7 @@
 // Standard
 #include <stdexcept>
 #include <sstream>
+#include <iomanip>
 
 // C
 #include <cstring>     // memset
@@ -87,9 +88,9 @@ class VIfaceImpl
             return this->id;
         }
 
-        void setMac(string mac);
+        void setMAC(string mac);
 
-        string getMac() const;
+        string getMAC() const;
 
         void setIPv4(string ipv4);
 

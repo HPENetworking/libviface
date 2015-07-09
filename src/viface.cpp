@@ -22,6 +22,23 @@ namespace viface
 
 /*= Helpers ==================================================================*/
 
+static bool parse_mac(vector<uint8_t>& out, string const& in)
+{
+    unsigned int bytes[6];
+    int scans = sscanf(
+        in.c_str(),
+        "%02x:%02x:%02x:%02x:%02x:%02x",
+        &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]
+    );
+
+    if (scans != 6) {
+        return false;
+    }
+
+    out.assign(&bytes[0], &bytes[6]);
+    return true;
+}
+
 static void read_flags(int sockfd, string name, struct ifreq* ifr)
 {
     ostringstream what;
@@ -161,22 +178,52 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
     }
 }
 
-void VIfaceImpl::setMac(string mac)
+void VIfaceImpl::setMAC(string mac)
 {
+    ostringstream what;
+
     // Ignore non-set MAC address
     if (mac.length() == 0) {
         return;
     }
 
-    // FIXME: Validate MAC address format
+    vector<uint8_t> parsed(6);
+    if (!parse_mac(parsed, mac)) {
+        what << "--- Invalid MAC address (" << mac << ") for ";
+        what << this->name << "." << endl;
+        throw invalid_argument(what.str());
+    }
+
     this->mac = mac;
     return;
 }
 
-string VIfaceImpl::getMac() const
+string VIfaceImpl::getMAC() const
 {
-    // FIXME: Implement!
-    return "";
+    ostringstream what;
+
+    // Read interface flags
+    struct ifreq ifr;
+    read_flags(this->kernel_socket, this->name, &ifr);
+
+    if (ioctl(this->kernel_socket, SIOCGIFHWADDR, &ifr) != 0)
+    {
+        what << "--- Unable to get MAC addr for " << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Convert binary MAC address to string
+    ostringstream addr;
+    addr << hex << std::setfill('0');
+    for (int i = 0 ; i < 6; i++) {
+        addr << setw(2) << (unsigned int) (0xFF & ifr.ifr_hwaddr.sa_data[i]);
+        if (i != 5) {
+            addr << ":";
+        }
+    }
+    return addr.str();
 }
 
 void VIfaceImpl::setIPv4(string ipv4)
@@ -308,6 +355,28 @@ void VIfaceImpl::up()
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, &ifr);
 
+    // Set MAC address
+    vector<uint8_t> mac_bin(6);
+    if (!parse_mac(mac_bin, this->mac)) {
+        what << "--- Invalid cached MAC address (" << this->mac << ") for ";
+        what << this->name << "." << endl;
+        what << "    Something really bad happened :/" << endl;
+        throw runtime_error(what.str());
+    }
+
+    ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+    for (int i = 0; i < 6; i++) {
+        ifr.ifr_hwaddr.sa_data[i] = mac_bin[i];
+    }
+    if (ioctl(this->kernel_socket, SIOCSIFHWADDR, &ifr) != 0)
+    {
+        what << "--- Unable to set MAC Address (" << this->mac << ") for ";
+        what << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
     // Set IPv4
     struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
 
@@ -414,7 +483,7 @@ VIface::VIface(string name, bool tap, int id) :
     pimpl(new VIfaceImpl(name, tap, id))
 {
     // Set default values
-    this->setMac();
+    this->setMAC();
     this->setIPv4();
     this->setIPv6();
     this->setMTU();
@@ -429,14 +498,14 @@ uint VIface::getID() const {
     return this->pimpl->getID();
 }
 
-void VIface::setMac(string mac)
+void VIface::setMAC(string mac)
 {
-    return this->pimpl->setMac(mac);
+    return this->pimpl->setMAC(mac);
 }
 
-string VIface::getMac() const
+string VIface::getMAC() const
 {
-    return this->pimpl->getMac();
+    return this->pimpl->getMAC();
 }
 
 void VIface::setIPv4(string ipv4)
