@@ -1,8 +1,2 @@
-# Build files
-*.o
-*.a
-*.so
-*.so.*
 Makefile
 build/*
-doc/api/*

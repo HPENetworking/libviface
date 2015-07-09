@@ -19,11 +19,8 @@
 #define _VIFACE_PRIV_HPP
 
 // Standard
-#include <stdexcept>
-#include <sstream>
-
-// Third party
-// ...
+//#include <stdexcept>
+//#include <sstream>
 
 // Framework
 #include "viface/viface.hpp"
@@ -38,15 +35,54 @@ class VIfaceImpl
     private:
 
         string name;
+        bool tap;
+        uint id;
+        string mac;
+        string ipv4;
+        string ipv6;
+        uint mtu;
+
+        static uint idseq;
 
     public:
 
-        VIfaceImpl(string host);
+        VIfaceImpl(string name, bool tap, int id);
 
         string getName() const
         {
             return this->name;
         }
+
+        uint getID() const
+        {
+            return this->id;
+        }
+
+        void setMac(std::string mac);
+
+        std::string getMac() const;
+
+        void setIPv4(std::string ipv4);
+
+        std::string getIPv4() const;
+
+        void setIPv6(std::string ipv6);
+
+        std::string getIPv6() const;
+
+        void setMTU(uint mtu);
+
+        uint getMTU() const;
+
+        void up() const;
+
+        void down() const;
+
+        bool isUp() const;
+
+        std::vector<uint8_t> receive(int timeout) const;
+
+        void send(std::vector<uint8_t>& packet) const;
 };
 };
 #endif // _VIFACE_PRIV_HPP
