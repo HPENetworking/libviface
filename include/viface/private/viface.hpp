@@ -58,6 +58,7 @@ class VIfaceImpl
     private:
 
         viface_queues_t queues;
+        int kernel_socket;
         string name;
         uint id;
         string mac;

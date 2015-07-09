@@ -22,10 +22,30 @@ namespace viface
 
 /*= Helpers ==================================================================*/
 
+static void read_flags(int sockfd, string name, struct ifreq* ifr) {
+    ostringstream what;
+
+    // Prepare communication structure
+    memset(ifr, 0, sizeof(struct ifreq));
+
+    // Set interface name
+    (void) strncpy(ifr->ifr_name, name.c_str(), IFNAMSIZ - 1);
+
+    // Read interface flags
+    if (ioctl(sockfd, SIOCGIFFLAGS, ifr) != 0)
+    {
+        what << "--- Unable to read " << name << " flags." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+}
+
+
 static string alloc_viface(string name, bool tap, viface_queues_t* queues)
 {
     int i = 0;
-    int fd = 0;
+    int fd = -1;
     ostringstream what;
 
     /* Create structure for ioctl call
@@ -125,6 +145,19 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
     memset(&queues, 0, sizeof(viface_queues_t));
     this->name = alloc_viface(name, tap, &queues);
     this->queues = queues;
+
+   // Create socket channel to the NET kernel for later ioctl
+    this->kernel_socket = -1;
+    this->kernel_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (this->kernel_socket < 0)
+    {
+        ostringstream what;
+        what << "--- Unable to create socket channel to the NET kernel.";
+        what << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
 }
 
 void VIfaceImpl::setMac(string mac)
@@ -181,20 +214,68 @@ uint VIfaceImpl::getMTU() const
 
 void VIfaceImpl::up() const
 {
-    // FIXME: Implement!
+    ostringstream what;
+
+    // Read interface flags
+    struct ifreq ifr;
+    read_flags(this->kernel_socket, this->name, &ifr);
+
+    // Set MTU
+    ifr.ifr_mtu = this->mtu;
+    if (ioctl(this->kernel_socket, SIOCSIFMTU, &ifr) != 0)
+    {
+        what << "--- Unable to set MTU (" << this->getMTU() << ") for ";
+        what << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Bring-up interface
+    ifr.ifr_flags |= IFF_UP;
+    if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0)
+    {
+        what << "--- Unable to bring-up interface " << this->name;
+        what << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
     return;
 }
 
 void VIfaceImpl::down() const
 {
-    // FIXME: Implement!
+    ostringstream what;
+
+    // Read interface flags
+    struct ifreq ifr;
+    read_flags(this->kernel_socket, this->name, &ifr);
+
+    // Bring-down interface
+    ifr.ifr_flags &= ~IFF_UP;
+    if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0)
+    {
+        what << "--- Unable to bring-down interface " << this->name;
+        what << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
     return;
 }
 
 bool VIfaceImpl::isUp() const
 {
-    // FIXME: Implement!
-    return false;
+    ostringstream what;
+
+    // Read interface flags
+    struct ifreq ifr;
+    read_flags(this->kernel_socket, this->name, &ifr);
+
+    return (ifr.ifr_flags & IFF_UP) != 0;
 }
 
 vector<uint8_t> VIfaceImpl::receive(int timeout) const

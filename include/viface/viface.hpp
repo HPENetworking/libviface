@@ -86,6 +86,8 @@ class VIface
          * You need to down the interface first to change this. Also, the
          * format of the MAC address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
+         * If you don't provide a MAC address (the default) one will be
+         * automatically assigned when bringing up the interface.
          *
          * @param[in]  mac New MAC address for this virtual interface in the
          *             form "d8:9d:67:d3:65:1f".
@@ -132,6 +134,9 @@ class VIface
          * You need to down the interface first to change this. Also, the
          * format of the IPv4 address is verified, but is just until up()
          * is called that the library will try to attempt to write it.
+         * If you don't provide a IPv6 address (the default) one may be
+         * automatically assigned when bringing up the interface
+         * (depending on your system configuration).
          *
          * @param[in]  ipv6 New IPv6 address for this virtual interface in the
          *             form "2001:0DB8:AC10:FE01::".

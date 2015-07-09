@@ -8,9 +8,7 @@ TEST_CASE("Create")
     std::string name = "viface%d";
     viface::VIface iface(name);
 
-    REQUIRE(
-         iface.getName()
-         ==
-         "viface0"
-    );
+    REQUIRE(iface.getName() == "viface0");
+    REQUIRE_NOTHROW(iface.up());
+    REQUIRE(iface.isUp() == true);
 }
