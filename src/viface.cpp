@@ -465,8 +465,24 @@ vector<uint8_t> VIfaceImpl::receive()
 
 void VIfaceImpl::send(vector<uint8_t>& packet) const
 {
-    // Write packet to TX queue
+    ostringstream what;
     int size = packet.size();
+
+    // RFC 791, p. 24: "Every internet module must be able to forward a
+    // datagram of 68 octets without further fragmentation."
+    if (size < 68) {
+        what << "--- Packet too small (" << size << ") ";
+        what << "too small (< 68)." << endl;
+        throw invalid_argument(what.str());
+    }
+
+    if (size > this->mtu) {
+        what << "--- Packet too large (" << size << ") ";
+        what << "for current MTU (> " << this->mtu << ")." << endl;
+        throw invalid_argument(what.str());
+    }
+
+    // Write packet to TX queue
     int written = write(this->queues.tx, &packet[0], size);
 
     if (written != size) {
