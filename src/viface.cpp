@@ -458,7 +458,7 @@ vector<uint8_t> VIfaceImpl::receive()
 
     // Copy packet from buffer and return
     vector<uint8_t> packet(nread);
-    packet.assign(&(this->pktbuff[0]), &(this->pktbuff[nread - 1]));
+    packet.assign(&(this->pktbuff[0]), &(this->pktbuff[nread]));
     return packet;
 }
 
