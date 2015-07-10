@@ -443,8 +443,7 @@ vector<uint8_t> VIfaceImpl::receive()
         // as ready" warns it, and so, it better to do this that to have
         // an application that frozes for no apparent reason.
         //
-        if (errno == EAGAIN)
-        {
+        if (errno == EAGAIN) {
             return vector<uint8_t>(0);
         }
 
@@ -494,6 +493,80 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
         throw runtime_error(what.str());
     }
     return;
+}
+
+void dispatch(set<VIface*>& ifaces, dispatcher_cb callback)
+{
+    int fd = -1;
+    int fdsread = -1;
+    int nfds = -1;
+
+    // Store mapping between file descriptors and interface it belongs
+    map<int,VIface*> reverse_id;
+
+    // Create and clear set of file descriptors
+    fd_set rfds;
+
+    // Create map of file descriptors and get maximum file descriptor for
+    // select call
+    for (auto iface : ifaces) {
+        // Store identity
+        fd = iface->pimpl->getRX();
+        reverse_id[fd] = iface;
+
+        // Get maximum file descriptor
+        if (fd > nfds) {
+            nfds = fd;
+        }
+    }
+    nfds++;
+
+    // Perform select system call
+    while (true) {
+        // Re-create set
+        FD_ZERO(&rfds);
+        for (auto iface : ifaces) {
+            fd = iface->pimpl->getRX();
+            FD_SET(fd, &rfds);
+        }
+
+        fdsread = select(nfds, &rfds, NULL, NULL, NULL);
+
+        // Check if select error
+        if (fdsread == -1) {
+            // A signal was caught. Return.
+            if (errno == EINTR) {
+                return;
+            }
+
+            // Something bad happened
+            ostringstream what;
+            what << "--- Unknown error in select() system call: ";
+            what << fdsread << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+
+        // Iterate all active file descriptors for reading
+        for (auto &pair : reverse_id) {
+            // Check if fd wasn't marked in select as available
+            if (!FD_ISSET(pair.first, &rfds)) {
+                continue;
+            }
+
+            // File descriptor is ready, perform read and dispatch
+            vector<uint8_t> packet = pair.second->receive();
+            if (packet.size() == 0) {
+                // Even if this is very unlikely, supposedly it can happen.
+                // See receive() comments about this.
+                continue;
+            }
+
+            // Dispatch packet
+            callback(pair.second->getName(), pair.second->getID(), packet);
+        }
+    }
 }
 
 

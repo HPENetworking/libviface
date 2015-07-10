@@ -28,6 +28,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "viface/config.hpp"
 
@@ -39,6 +40,35 @@ namespace viface
  */
 
 class VIfaceImpl;
+class VIface;
+
+/**
+ * Dispatch callback type to handle packet reception.
+ *
+ * @param[in]  name Name of the virtual interface that received the packet.
+ * @param[in]  id Numeric ID assigned to the virtual interface.
+ * @param[in]  packet Packet (if tun) or frame (if tap) as a binary blob
+ *             (array of bytes).
+ */
+typedef std::function<void (std::string const& name, uint id,
+                            std::vector<uint8_t>& packet)> dispatcher_cb;
+
+/**
+ * Dispatch function to handle packet reception for a group of interfaces.
+ *
+ * This function is implemented using an efficient select() system call to
+ * monitor many network interfaces.
+ *
+ * @param[in]  ifaces a std::set of virtual interfaces to monitor.
+ * @param[in]  callback a dispatcher_cb callback to be called to handle packet
+ *             reception.
+ *
+ * @return always void.
+ *         This call blocks forever UNLESS a signal is received, in which case
+ *         is user's responsibility to recall the dispatch function or to
+ *         stop execution.
+ */
+void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback);
 
 /**
  * Virtual Interface object.
@@ -52,6 +82,7 @@ class VIface
         std::unique_ptr<VIfaceImpl> pimpl;
         VIface(const VIface& other) = delete;
         VIface& operator=(VIface rhs) = delete;
+        friend void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback);
 
     public:
 

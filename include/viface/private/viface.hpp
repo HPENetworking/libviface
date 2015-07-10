@@ -19,9 +19,10 @@
 #define _VIFACE_PRIV_HPP
 
 // Standard
-#include <stdexcept>
-#include <sstream>
-#include <iomanip>
+#include <stdexcept>   // Exceptions
+#include <sstream>     // ostringstream
+#include <iomanip>     // setw
+#include <map>         // map
 
 // C
 #include <cstring>     // memset
@@ -84,6 +85,16 @@ class VIfaceImpl
         uint getID() const
         {
             return this->id;
+        }
+
+        int getTX() const
+        {
+            return this->queues.tx;
+        }
+
+        int getRX() const
+        {
+            return this->queues.rx;
         }
 
         void setMAC(string mac);

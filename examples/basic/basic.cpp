@@ -3,6 +3,14 @@
 
 using namespace std;
 
+int count = 0;
+
+void mycallback(string const& name, uint id, vector<uint8_t>& packet) {
+    cout << "+++ Received packet " << count << " from interface " << name;
+    cout << " (" << id << ") of size " << packet.size() << endl;
+    count++;
+}
+
 int main(int argc, const char* argv[])
 {
     string name = "viface0";
@@ -21,10 +29,22 @@ int main(int argc, const char* argv[])
     }
 
     try {
+        // Create interface
         viface::VIface iface(name);
+
+        // Configure interface
+        iface.setIPv4(ip);
+        iface.setMAC(mac);
+
+        // Bring up interface
+        iface.up();
+
+        // Call dispatch
+        cout << "Starting packet printer example at " << name << " ..." << endl;
+        set<viface::VIface*> myifaces = {&iface};
+        viface::dispatch(myifaces, mycallback);
     } catch(exception const & ex) {
-        cerr << "Unable to create virtual interface " << name << endl;
-        cerr << ":: " << ex.what() << endl;
+        cerr << ex.what() << endl;
         return -1;
     }
 
