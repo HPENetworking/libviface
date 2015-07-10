@@ -3,13 +3,21 @@
 
 using namespace std;
 
-int count = 0;
+class MyDispatcher
+{
+    private:
 
-void mycallback(string const& name, uint id, vector<uint8_t>& packet) {
-    cout << "+++ Received packet " << count << " from interface " << name;
-    cout << " (" << id << ") of size " << packet.size() << endl;
-    count++;
-}
+        int count = 0;
+
+    public:
+
+        void handler(string const& name, uint id, vector<uint8_t>& packet) {
+            cout << "+++ Received packet " << count;
+            cout << " from interface " << name;
+            cout << " (" << id << ") of size " << packet.size() << endl;
+            this->count++;
+        }
+};
 
 int main(int argc, const char* argv[])
 {
@@ -40,9 +48,20 @@ int main(int argc, const char* argv[])
         iface.up();
 
         // Call dispatch
-        cout << "Starting packet printer example at " << name << " ..." << endl;
+        cout << "Starting packet printer for " << name << " ..." << endl;
+
         set<viface::VIface*> myifaces = {&iface};
-        viface::dispatch(myifaces, mycallback);
+
+        MyDispatcher printer;
+        viface::dispatcher_cb mycb = bind(
+            &MyDispatcher::handler,
+            &printer,
+            placeholders::_1,
+            placeholders::_2,
+            placeholders::_3
+            );
+
+        viface::dispatch(myifaces, mycb);
     } catch(exception const & ex) {
         cerr << ex.what() << endl;
         return -1;
