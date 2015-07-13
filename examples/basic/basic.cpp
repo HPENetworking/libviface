@@ -3,22 +3,11 @@
 
 using namespace std;
 
-class MyDispatcher
-{
-    private:
-
-        int count = 0;
-
-    public:
-
-        void handler(string const& name, uint id, vector<uint8_t>& packet) {
-            cout << "+++ Received packet " << count;
-            cout << " from interface " << name;
-            cout << " (" << id << ") of size " << packet.size() << endl;
-            this->count++;
-        }
-};
-
+/**
+ * This example shows the basics to setup a virtual network interface.
+ * This will configure and bring-up a network interface called viface0
+ * (or use the name passed as first argument).
+ */
 int main(int argc, const char* argv[])
 {
     string name = "viface0";
@@ -47,21 +36,6 @@ int main(int argc, const char* argv[])
         // Bring up interface
         iface.up();
 
-        // Call dispatch
-        cout << "Starting packet printer for " << name << " ..." << endl;
-
-        set<viface::VIface*> myifaces = {&iface};
-
-        MyDispatcher printer;
-        viface::dispatcher_cb mycb = bind(
-            &MyDispatcher::handler,
-            &printer,
-            placeholders::_1,
-            placeholders::_2,
-            placeholders::_3
-            );
-
-        viface::dispatch(myifaces, mycb);
     } catch(exception const & ex) {
         cerr << ex.what() << endl;
         return -1;
