@@ -505,6 +505,22 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
     int fd = -1;
     int fdsread = -1;
     int nfds = -1;
+    struct timeval tv;
+
+    // Check non-empty set
+    if (ifaces.empty()) {
+        ostringstream what;
+        what << "--- Empty virtual interfaces set" << endl;
+        throw invalid_argument(what.str());
+    }
+
+    // Setup timeout
+    struct timeval* tvp = NULL;
+    if (millis >= 0) {
+        tv.tv_sec = millis / 1000;
+        tv.tv_usec = (millis % 1000) * 1000;
+        tvp = &tv;
+    }
 
     // Store mapping between file descriptors and interface it belongs
     map<int,VIface*> reverse_id;
@@ -535,7 +551,7 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
             FD_SET(fd, &rfds);
         }
 
-        fdsread = select(nfds, &rfds, NULL, NULL, NULL);
+        fdsread = select(nfds, &rfds, NULL, NULL, tvp);
 
         // Check if select error
         if (fdsread == -1) {
