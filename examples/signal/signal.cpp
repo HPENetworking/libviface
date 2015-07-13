@@ -42,7 +42,7 @@ void signal_handler(int signal)
  */
 int main(int argc, const char* argv[])
 {
-    cout << "Starting dispatch example ..." << endl;
+    cout << "Starting signal example ..." << endl;
 
     try {
         // Setup interfaces
