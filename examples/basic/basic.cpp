@@ -35,7 +35,6 @@ int main(int argc, const char* argv[])
 
         // Bring up interface
         iface.up();
-
     } catch(exception const & ex) {
         cerr << ex.what() << endl;
         return -1;

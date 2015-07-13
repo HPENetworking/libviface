@@ -353,7 +353,8 @@ void VIfaceImpl::up()
 
         addr->sin_family = AF_INET;
         if (!inet_pton(AF_INET, this->ipv4.c_str(), &addr->sin_addr)) {
-            what << "--- Invalid cached IPv4 address (" << this->ipv4 << ") for ";
+            what << "--- Invalid cached IPv4 address (" << this->ipv4 <<
+            ") for ";
             what << this->name << "." << endl;
             what << "    Something really bad happened :/" << endl;
             throw runtime_error(what.str());
@@ -499,7 +500,7 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
     return;
 }
 
-void dispatch(set<VIface*>& ifaces, dispatcher_cb callback)
+void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
 {
     int fd = -1;
     int fdsread = -1;

@@ -62,13 +62,17 @@ typedef std::function<void (std::string const& name, uint id,
  * @param[in]  ifaces a std::set of virtual interfaces to monitor.
  * @param[in]  callback a dispatcher_cb callback to be called to handle packet
  *             reception.
+ * @param[in]  millis optional timeout value in milliseconds. > 0 means wait
+ *             forever.
  *
  * @return always void.
- *         This call blocks forever UNLESS a signal is received, in which case
- *         is user's responsibility to recall the dispatch function or to
- *         stop execution.
+ *         This call blocks forever UNLESS one of two situations are in place:
+ *         - A signal is received, in which case is user's responsibility to
+ *           recall the dispatch function or to stop execution.
+ *         - A millis timeout value >= 0 is given and this
  */
-void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback);
+void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback,
+              int millis = -1);
 
 /**
  * Virtual Interface object.
@@ -82,14 +86,16 @@ class VIface
         std::unique_ptr<VIfaceImpl> pimpl;
         VIface(const VIface& other) = delete;
         VIface& operator=(VIface rhs) = delete;
-        friend void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback);
+        friend void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback,
+                             int millis);
 
     public:
 
         /**
          * Create a VIface object with given name.
          *
-         * @param[in]  name Name of the virtual interface.
+         * @param[in]  name Name of the virtual interface. The placeholder %d
+         *             can be used and a number will be assigned to it.
          * @param[in]  tap Tap device (default, true) or Tun device (false).
          * @param[in]  id Optional numeric id. If given id < 0 a sequential
          *             number will be given.
