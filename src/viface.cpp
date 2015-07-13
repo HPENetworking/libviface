@@ -506,6 +506,7 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
     int fdsread = -1;
     int nfds = -1;
     struct timeval tv;
+    struct timeval* tvp = NULL;
 
     // Check non-empty set
     if (ifaces.empty()) {
@@ -515,10 +516,7 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
     }
 
     // Setup timeout
-    struct timeval* tvp = NULL;
     if (millis >= 0) {
-        tv.tv_sec = millis / 1000;
-        tv.tv_usec = (millis % 1000) * 1000;
         tvp = &tv;
     }
 
@@ -551,6 +549,12 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
             FD_SET(fd, &rfds);
         }
 
+        // Re-set timeout
+        if (tvp != NULL) {
+            tv.tv_sec = millis / 1000;
+            tv.tv_usec = (millis % 1000) * 1000;
+        }
+
         fdsread = select(nfds, &rfds, NULL, NULL, tvp);
 
         // Check if select error
@@ -567,6 +571,11 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
             what << "    Error: " << strerror(errno);
             what << " (" << errno << ")." << endl;
             throw runtime_error(what.str());
+        }
+
+        // Check if timeout
+        if (tvp != NULL && fdsread == 0) {
+            return;
         }
 
         // Iterate all active file descriptors for reading
