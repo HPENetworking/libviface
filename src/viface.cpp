@@ -325,43 +325,47 @@ void VIfaceImpl::up()
     read_flags(this->kernel_socket, this->name, ifr);
 
     // Set MAC address
-    vector<uint8_t> mac_bin(6);
-    if (!parse_mac(mac_bin, this->mac)) {
-        what << "--- Invalid cached MAC address (" << this->mac << ") for ";
-        what << this->name << "." << endl;
-        what << "    Something really bad happened :/" << endl;
-        throw runtime_error(what.str());
-    }
+    if (!this->mac.empty()) {
+        vector<uint8_t> mac_bin(6);
+        if (!parse_mac(mac_bin, this->mac)) {
+            what << "--- Invalid cached MAC address (" << this->mac << ") for ";
+            what << this->name << "." << endl;
+            what << "    Something really bad happened :/" << endl;
+            throw runtime_error(what.str());
+        }
 
-    ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-    for (int i = 0; i < 6; i++) {
-        ifr.ifr_hwaddr.sa_data[i] = mac_bin[i];
-    }
-    if (ioctl(this->kernel_socket, SIOCSIFHWADDR, &ifr) != 0) {
-        what << "--- Unable to set MAC Address (" << this->mac << ") for ";
-        what << this->name << "." << endl;
-        what << "    Error: " << strerror(errno);
-        what << " (" << errno << ")." << endl;
-        throw runtime_error(what.str());
+        ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+        for (int i = 0; i < 6; i++) {
+            ifr.ifr_hwaddr.sa_data[i] = mac_bin[i];
+        }
+        if (ioctl(this->kernel_socket, SIOCSIFHWADDR, &ifr) != 0) {
+            what << "--- Unable to set MAC Address (" << this->mac << ") for ";
+            what << this->name << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
     }
 
     // Set IPv4
-    struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
+    if (!this->ipv4.empty()) {
+        struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
 
-    addr->sin_family = AF_INET;
-    if (!inet_pton(AF_INET, this->ipv4.c_str(), &addr->sin_addr)) {
-        what << "--- Invalid cached IPv4 address (" << this->ipv4 << ") for ";
-        what << this->name << "." << endl;
-        what << "    Something really bad happened :/" << endl;
-        throw runtime_error(what.str());
-    }
+        addr->sin_family = AF_INET;
+        if (!inet_pton(AF_INET, this->ipv4.c_str(), &addr->sin_addr)) {
+            what << "--- Invalid cached IPv4 address (" << this->ipv4 << ") for ";
+            what << this->name << "." << endl;
+            what << "    Something really bad happened :/" << endl;
+            throw runtime_error(what.str());
+        }
 
-    if (ioctl(this->kernel_socket, SIOCSIFADDR, &ifr) != 0) {
-        what << "--- Unable to set IPv4 (" << this->ipv4 << ") for ";
-        what << this->name << "." << endl;
-        what << "    Error: " << strerror(errno);
-        what << " (" << errno << ")." << endl;
-        throw runtime_error(what.str());
+        if (ioctl(this->kernel_socket, SIOCSIFADDR, &ifr) != 0) {
+            what << "--- Unable to set IPv4 (" << this->ipv4 << ") for ";
+            what << this->name << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
     }
 
     // Set MTU
