@@ -110,6 +110,14 @@ class VIfaceImpl
 
         string getIPv4() const;
 
+        void setIPv4Netmask(string netmask);
+
+        string getIPv4Netmask() const;
+
+        void setIPv4Broadcast(string broadcast);
+
+        string getIPv4Broadcast() const;
+
         void setMTU(uint mtu);
 
         uint getMTU() const;

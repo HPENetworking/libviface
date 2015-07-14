@@ -168,6 +168,52 @@ class VIface
         std::string getIPv4() const;
 
         /**
+         * Set the IPv4 netmask of the virtual interface.
+         *
+         * The format of the IPv4 netmask is verified, but is just until up()
+         * is called that the library will try to attempt to write it.
+         *
+         * @param[in]  netmask New IPv4 netmask for this virtual interface in
+         *             the form "255.255.255.0".
+         *
+         * @return always void.
+         *         An exception is thrown in case of malformed argument.
+         */
+        void setIPv4Netmask(std::string netmask);
+
+        /**
+         * Getter method for virtual interface associated IPv4 netmask.
+         *
+         * @return the current IPv4 netmask of the virtual interface.
+         *         An empty string means no associated IPv4 netmask.
+         */
+        std::string getIPv4Netmask() const;
+
+        /**
+         * Set the IPv4 broadcast address of the virtual interface.
+         *
+         * The format of the IPv4 broadcast address is verified, but is just
+         * until up() is called that the library will try to attempt to write
+         * it.
+         *
+         * @param[in]  broadcast New IPv4 broadcast address for this virtual
+         *             interface in the form "172.17.42.255".
+         *
+         * @return always void.
+         *         An exception is thrown in case of malformed argument.
+         */
+        void setIPv4Broadcast(std::string broadcast);
+
+        /**
+         * Getter method for virtual interface associated IPv4 broadcast
+         * address.
+         *
+         * @return the current IPv4 broadcast address of the virtual interface.
+         *         An empty string means no associated IPv4 broadcast address.
+         */
+        std::string getIPv4Broadcast() const;
+
+        /**
          * Set the MTU of the virtual interface.
          *
          * The range of the MTU is verified, but is just until up() is called

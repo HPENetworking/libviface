@@ -338,6 +338,30 @@ string VIfaceImpl::getIPv4() const
     return string(addr);
 }
 
+void VIfaceImpl::setIPv4Netmask(string netmask)
+{
+    // FIXME: Implement!
+    return;
+}
+
+string VIfaceImpl::getIPv4Netmask() const
+{
+    // FIXME: Implement!
+    return string();
+}
+
+void VIfaceImpl::setIPv4Broadcast(string broadcast)
+{
+    // FIXME: Implement!
+    return;
+}
+
+string VIfaceImpl::getIPv4Broadcast() const
+{
+    // FIXME: Implement!
+    return string();
+}
+
 void VIfaceImpl::setMTU(uint mtu)
 {
     ostringstream what;
@@ -607,6 +631,8 @@ uint64_t VIfaceImpl::readStatFile(string const& stat)
     ostringstream what;
 
     // Check if stat is valid
+    // FIXME: Should we cache this in order to avoid a directory listing per
+    //        requested reading?
     set<string> stats_keys = this->listStats();
     if (stats_keys.find(stat) == stats_keys.end()) {
         what << "--- Unknown statistic " << stat;
@@ -799,6 +825,27 @@ string VIface::getIPv4() const
 {
     return this->pimpl->getIPv4();
 }
+
+void VIface::setIPv4Netmask(string netmask)
+{
+    return this->pimpl->setIPv4Netmask(netmask);
+}
+
+string VIface::getIPv4Netmask() const
+{
+    return this->pimpl->getIPv4Netmask();
+}
+
+void VIface::setIPv4Broadcast(string broadcast)
+{
+    return this->pimpl->setIPv4Broadcast(broadcast);
+}
+
+string VIface::getIPv4Broadcast() const
+{
+    return this->pimpl->getIPv4Broadcast();
+}
+
 
 void VIface::setMTU(uint mtu)
 {
