@@ -17,7 +17,7 @@ void mycb(string const& name, uint id, vector<uint8_t>& packet) {
     cout << " (" << id << ") of size " << packet.size() << endl;
 }
 
-// Alarm signal handler
+// Signal handler routine
 void signal_handler(int signal)
 {
     switch (signal) {
