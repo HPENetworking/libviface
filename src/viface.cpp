@@ -21,6 +21,9 @@ namespace viface
 {
 /*= Utilities ================================================================*/
 
+namespace utils
+{
+
 vector<uint8_t> parse_mac(string const& mac)
 {
     unsigned int bytes[6];
@@ -103,6 +106,7 @@ uint32_t crc32(vector<uint8_t> const& bytes)
     }
 
     return crc;
+}
 }
 
 
@@ -257,7 +261,7 @@ VIfaceImpl::~VIfaceImpl()
 
 void VIfaceImpl::setMAC(string mac)
 {
-    vector<uint8_t> mac_bin = parse_mac(mac);
+    vector<uint8_t> mac_bin = utils::parse_mac(mac);
     this->mac = mac;
     return;
 }
@@ -392,7 +396,7 @@ void VIfaceImpl::up()
 
     // Set MAC address
     if (!this->mac.empty()) {
-        vector<uint8_t> mac_bin = parse_mac(this->mac);
+        vector<uint8_t> mac_bin = utils::parse_mac(this->mac);
 
         ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
         for (int i = 0; i < 6; i++) {

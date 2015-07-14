@@ -1,5 +1,6 @@
 #include <iostream>
 #include <viface/viface.hpp>
+#include <viface/utils.hpp>
 
 using namespace std;
 
@@ -12,9 +13,12 @@ class MyDispatcher
     public:
 
         void handler(string const& name, uint id, vector<uint8_t>& packet) {
-            cout << "+++ Received packet " << count;
+            cout << "+++ Received packet " << dec << count;
             cout << " from interface " << name;
-            cout << " (" << id << ") of size " << packet.size() << endl;
+            cout << " (" << id << ") of size " << packet.size();
+            cout << " and CRC of 0x" << hex << viface::utils::crc32(packet);
+            cout << endl;
+            cout << viface::utils::hexdump(packet) << endl;
             this->count++;
         }
 };
