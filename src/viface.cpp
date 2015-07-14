@@ -19,24 +19,74 @@
 
 namespace viface
 {
-/*= Helpers ==================================================================*/
+/*= Utilities ================================================================*/
 
-static bool parse_mac(vector<uint8_t>& out, string const& in)
+vector<uint8_t> parse_mac(string const& mac)
 {
     unsigned int bytes[6];
     int scans = sscanf(
-        in.c_str(),
+        mac.c_str(),
         "%02x:%02x:%02x:%02x:%02x:%02x",
         &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]
         );
 
     if (scans != 6) {
-        return false;
+        ostringstream what;
+        what << "--- Invalid MAC address " << mac << endl;
+        throw invalid_argument(what.str());
     }
 
-    out.assign(&bytes[0], &bytes[6]);
-    return true;
+    vector<uint8_t> parsed(6);
+    parsed.assign(&bytes[0], &bytes[6]);
+    return parsed;
 }
+
+string hexdump(vector<uint8_t> const& bytes)
+{
+    ostringstream buff;
+
+    int buflen = bytes.size();
+
+    int i;
+    int j;
+    char c;
+
+    for (i = 0, j = 0; i < buflen; i += 16) {
+        // Print offset
+        buff << right << setfill('0') << setw(4) << i << "  ";
+
+        // Print bytes in hexadecimal
+        buff << hex;
+        for (j = 0; j < 16; j++) {
+            if (i + j < buflen) {
+                c = bytes[i + j];
+                buff << setfill('0') << setw(2) << (int(c) & 0xFF);
+                buff << " ";
+            } else {
+                buff << "   ";
+            }
+        }
+        buff << dec;
+        buff << " ";
+
+        // Print printable characters
+        for (j = 0; j < 16; j++) {
+            if (i + j < buflen) {
+                c = bytes[i + j];
+                if (isprint(c)) {
+                    buff << c;
+                } else {
+                    buff << ".";
+                }
+            }
+        }
+        buff << endl;
+    }
+    return buff.str();
+}
+
+
+/*= Helpers ==================================================================*/
 
 static void read_flags(int sockfd, string name, struct ifreq& ifr)
 {
@@ -177,13 +227,7 @@ void VIfaceImpl::setMAC(string mac)
         return;
     }
 
-    vector<uint8_t> parsed(6);
-    if (!parse_mac(parsed, mac)) {
-        what << "--- Invalid MAC address (" << mac << ") for ";
-        what << this->name << "." << endl;
-        throw invalid_argument(what.str());
-    }
-
+    vector<uint8_t> mac_bin = parse_mac(mac);
     this->mac = mac;
     return;
 }
@@ -326,13 +370,7 @@ void VIfaceImpl::up()
 
     // Set MAC address
     if (!this->mac.empty()) {
-        vector<uint8_t> mac_bin(6);
-        if (!parse_mac(mac_bin, this->mac)) {
-            what << "--- Invalid cached MAC address (" << this->mac << ") for ";
-            what << this->name << "." << endl;
-            what << "    Something really bad happened :/" << endl;
-            throw runtime_error(what.str());
-        }
+        vector<uint8_t> mac_bin = parse_mac(this->mac);
 
         ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
         for (int i = 0; i < 6; i++) {
