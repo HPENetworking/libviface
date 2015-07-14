@@ -100,7 +100,11 @@ class VIface
          * @param[in]  id Optional numeric id. If given id < 0 a sequential
          *             number will be given.
          */
-        VIface(std::string name = "viface%d", bool tap = true, int id = -1);
+        explicit VIface(
+            std::string name = "viface%d",
+            bool tap = true,
+            int id = -1
+        );
         ~VIface();
 
         /**
