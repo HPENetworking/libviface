@@ -1,7 +1,7 @@
 #include <iostream>
 #include <csignal>
 #include <unistd.h>
-#include "viface/viface.hpp"
+#include <viface/viface.hpp>
 
 using namespace std;
 
