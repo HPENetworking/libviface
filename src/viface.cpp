@@ -23,7 +23,6 @@ namespace viface
 
 namespace utils
 {
-
 vector<uint8_t> parse_mac(string const& mac)
 {
     unsigned int bytes[6];
@@ -465,7 +464,6 @@ void VIfaceImpl::up()
 
     // Address
     if (!this->ipv4.empty()) {
-
         if (!inet_pton(AF_INET, this->ipv4.c_str(), &addr->sin_addr)) {
             what << "--- Invalid cached IPv4 address (" << this->ipv4;
             what << ") for " << this->name << "." << endl;
@@ -484,7 +482,6 @@ void VIfaceImpl::up()
 
     // Netmask
     if (!this->netmask.empty()) {
-
         if (!inet_pton(AF_INET, this->netmask.c_str(), &addr->sin_addr)) {
             what << "--- Invalid cached IPv4 netmask (" << this->netmask;
             what << ") for " << this->name << "." << endl;
@@ -503,7 +500,6 @@ void VIfaceImpl::up()
 
     // Broadcast
     if (!this->broadcast.empty()) {
-
         if (!inet_pton(AF_INET, this->broadcast.c_str(), &addr->sin_addr)) {
             what << "--- Invalid cached IPv4 broadcast (" << this->broadcast;
             what << ") for " << this->name << "." << endl;
@@ -841,7 +837,10 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
             }
 
             // Dispatch packet
-            if (!callback(pair.second->getName(), pair.second->getID(), packet)) {
+            if (!callback(
+                    pair.second->getName(),
+                    pair.second->getID(),
+                    packet)) {
                 return;
             }
         }
