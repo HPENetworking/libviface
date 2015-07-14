@@ -29,7 +29,7 @@ int main(int argc, const char* argv[])
     cout << "Starting stats example ..." << endl;
 
     try {
-        // Create a bring-up interface
+        // Create and bring-up interface
         viface::VIface iface;
         iface.up();
 

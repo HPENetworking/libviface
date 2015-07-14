@@ -74,8 +74,6 @@ void receive_wkr(viface::VIface* iface)
 
     while (!quit) {
         // We configure a dispatcher with a timeout of 1 second
-        // The bad thing is that if the interface is very busy the timeout
-        // could never happen.
         viface::dispatch(ifaces, mycb, 1000);
     }
 }
@@ -104,7 +102,7 @@ int main(int argc, const char* argv[])
     cout << "Starting threads example ..." << endl;
 
     try {
-        // Create a bring-up interface
+        // Create and bring-up interface
         viface::VIface iface;
         iface.up();
 
