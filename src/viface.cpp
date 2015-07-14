@@ -556,6 +556,104 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
     return;
 }
 
+std::set<std::string> VIfaceImpl::listStats() const
+{
+    set<string> result;
+
+    DIR* dir;
+    struct dirent* ent;
+    ostringstream what;
+    string path = "/sys/class/net/" + this->name + "/statistics/";
+
+    // Open directory
+    if ((dir = opendir(path.c_str())) == NULL) {
+        what << "--- Unable to open statistics folder for interface ";
+        what << this->name << ":" << endl;
+        what << "    " << path << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // List files
+    while ((ent = readdir(dir)) != NULL) {
+        string entry(ent->d_name);
+
+        // Ignore current, parent and hidden files
+        if (entry[0] != '.') {
+            result.insert(entry);
+        }
+    }
+
+    // Close directory
+    if (closedir(dir) != 0) {
+        what << "--- Unable to close statistics folder for interface ";
+        what << this->name << ":" << endl;
+        what << "    " << path << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    return result;
+}
+
+uint64_t VIfaceImpl::readStatFile(string const& stat)
+{
+    ostringstream what;
+
+    // Check if stat is valid
+    set<string> stats_keys = this->listStats();
+    if (stats_keys.find(stat) == stats_keys.end()) {
+        what << "--- Unknown statistic " << stat;
+        what << " for interface " << this->name << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Open file
+    string path = "/sys/class/net/" + this->name + "/statistics/" + stat;
+    ifstream statf(path);
+    uint64_t value;
+
+    // Check file open
+    if (!statf.is_open()) {
+        what << "--- Unable to open statistics file " << path;
+        what << " for interface " << this->name << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Read content into value
+    statf >> value;
+
+    // close file
+    statf.close();
+
+    // Create entry if this stat wasn't cached
+    if (this->stats_cache.find(stat) == this->stats_cache.end()) {
+        this->stats_cache[stat] = 0;
+    }
+
+    return value;
+}
+
+uint64_t VIfaceImpl::readStat(std::string const& stat)
+{
+    uint64_t value = this->readStatFile(stat);
+
+    // Return value minus the cached value
+    return value - this->stats_cache[stat];
+}
+
+void VIfaceImpl::clearStat(std::string const& stat)
+{
+    uint64_t value = this->readStatFile(stat);
+
+    // Set current value as cache
+    this->stats_cache[stat] = value;
+    return;
+}
+
+
 void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
 {
     int fd = -1;
@@ -731,5 +829,20 @@ vector<uint8_t> VIface::receive()
 void VIface::send(vector<uint8_t>& packet) const
 {
     return this->pimpl->send(packet);
+}
+
+std::set<std::string> VIface::listStats() const
+{
+    return this->pimpl->listStats();
+}
+
+uint64_t VIface::readStat(std::string const& stat)
+{
+    return this->pimpl->readStat(stat);
+}
+
+void VIface::clearStat(std::string const& stat)
+{
+    return this->pimpl->clearStat(stat);
 }
 }

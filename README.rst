@@ -51,8 +51,6 @@ Improvements
 - Add support to setup IPv4 netmask.
 - Add support to setup IPv4 broadcast address.
 - Add support to setup all IPv6 related.
-- Add support to read (and clear?) counters.
-  Note : /sys/class/net/{name}/statistics/{counter}
 - Improve and fix possible race conditions when up/down is issued (and thus
   packet buffer based on MTU is resized) and a dispatcher is active or any
   other IO is active.

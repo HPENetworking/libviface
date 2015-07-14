@@ -21,6 +21,7 @@
 // Standard
 #include <stdexcept>   // Exceptions
 #include <sstream>     // ostringstream
+#include <fstream>     // ifstream
 #include <iomanip>     // setw
 #include <map>         // map
 
@@ -31,6 +32,7 @@
 // Posix
 #include <unistd.h>    // open(), close()
 #include <fcntl.h>     // O_RDWR
+#include <dirent.h>    // opendir, readdir, closedir
 
 // Network
 #include <arpa/inet.h> // inet_ntop()
@@ -70,6 +72,8 @@ class VIfaceImpl
         string mac;
         string ipv4;
         uint mtu;
+
+        map<string,uint64_t> stats_cache;
 
         static uint idseq;
 
@@ -119,6 +123,14 @@ class VIfaceImpl
         vector<uint8_t> receive();
 
         void send(vector<uint8_t>& packet) const;
+
+        set<string> listStats() const;
+
+        uint64_t readStatFile(string const& stat);
+
+        uint64_t readStat(string const& stat);
+
+        void clearStat(string const& stat);
 };
 };
 #endif // _VIFACE_PRIV_HPP

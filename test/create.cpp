@@ -26,4 +26,11 @@ TEST_CASE("Create")
     REQUIRE(iface.getMTU() == 1500);
     REQUIRE(iface.getMAC() == mac);
     REQUIRE(iface.getIPv4() == ipv4);
+
+    // List statistics keys
+    std::set<std::string> stats = iface.listStats();
+    std::cout << "Statistics found:" << std::endl;
+    for (auto & key : stats) {
+        std::cout << "    " << key << " : " << iface.readStat(key) << std::endl;
+    }
 }

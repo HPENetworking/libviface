@@ -236,9 +236,9 @@ class VIface
         std::vector<uint8_t> receive();
 
         /**
-         * Send a packet from this virtual interface.
+         * Send a packet to this virtual interface.
          *
-         * Note: Sending a packet from this virtual interface means that it
+         * Note: Sending a packet to this virtual interface means that it
          * will reach any userspace program (or the kernel) listening for
          * packets in the interface with the name of the instance of this
          * class.
@@ -252,6 +252,37 @@ class VIface
          *         Ethernet 2 size. Another case can be write errors.
          */
         void send(std::vector<uint8_t>& packet) const;
+
+        /**
+         * List available statistics for this interface.
+         *
+         * @return set of statistics names.
+         *         For example, {"rx_packets", "tx_bytes", ...}
+         *         Exceptions can be thrown in case of generic IO errors.
+         */
+        std::set<std::string> listStats() const;
+
+        /**
+         * Read given statistic for this interface.
+         *
+         * @param[in]  stat statistic name. See listStats().
+         *
+         * @return current value of the given statistic.
+         *         An exception is thrown if stat is unknown or in case of IO
+         *         errors.
+         */
+        uint64_t readStat(std::string const& stat);
+
+        /**
+         * Clear given statistic for this interface.
+         *
+         * @param[in]  stat statistic name. See listStats().
+         *
+         * @return always void.
+         *         An exception is thrown if stat is unknown or in case of IO
+         *         errors.
+         */
+        void clearStat(std::string const& stat);
 };
 
 /** @} */ // End of libviface
