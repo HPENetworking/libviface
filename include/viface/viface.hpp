@@ -49,8 +49,10 @@ class VIface;
  * @param[in]  id Numeric ID assigned to the virtual interface.
  * @param[in]  packet Packet (if tun) or frame (if tap) as a binary blob
  *             (array of bytes).
+ *
+ * @return true if the dispatcher should continue processing or false to stop.
  */
-typedef std::function<void (std::string const& name, uint id,
+typedef std::function<bool (std::string const& name, uint id,
                             std::vector<uint8_t>& packet)> dispatcher_cb;
 
 /**

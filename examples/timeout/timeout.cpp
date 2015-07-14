@@ -4,9 +4,10 @@
 using namespace std;
 
 // Dispatcher callback, just print something
-void mycb(string const& name, uint id, vector<uint8_t>& packet) {
+bool mycb(string const& name, uint id, vector<uint8_t>& packet) {
     cout << "+++ Received packet from interface " << name;
     cout << " (" << id << ") of size " << packet.size() << endl;
+    return true;
 }
 
 /**

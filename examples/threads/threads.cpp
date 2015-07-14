@@ -45,7 +45,7 @@ class MyDispatcher
 
     public:
 
-        void handler(string const& name, uint id, vector<uint8_t>& packet) {
+        bool handler(string const& name, uint id, vector<uint8_t>& packet) {
             cout << "+++ Received packet " << dec << count;
             cout << " from interface " << name;
             cout << " (" << id << ") of size " << packet.size();
@@ -53,6 +53,9 @@ class MyDispatcher
             cout << endl;
             cout << viface::utils::hexdump(packet) << endl;
             this->count++;
+
+            // Continue processing only if quit wasn't requested
+            return quit == 0;
         }
 };
 

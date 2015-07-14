@@ -841,7 +841,9 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
             }
 
             // Dispatch packet
-            callback(pair.second->getName(), pair.second->getID(), packet);
+            if (!callback(pair.second->getName(), pair.second->getID(), packet)) {
+                return;
+            }
         }
     }
 }
