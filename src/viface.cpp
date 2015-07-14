@@ -241,6 +241,20 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
     this->mtu = 1500;
 }
 
+VIfaceImpl::~VIfaceImpl()
+{
+    if (close(this->queues.rx) ||
+        close(this->queues.tx) ||
+        close(this->kernel_socket)) {
+        ostringstream what;
+        what << "--- Unable to close file descriptors for interface ";
+        what << this->name << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+}
+
 void VIfaceImpl::setMAC(string mac)
 {
     vector<uint8_t> mac_bin = parse_mac(mac);

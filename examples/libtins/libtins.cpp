@@ -5,7 +5,7 @@
 
 using namespace std;
 
-class TinsVIface: public viface::VIface
+class TinsVIface : public viface::VIface
 {
     public:
 
@@ -139,7 +139,6 @@ int main(int argc, const char* argv[])
         cout << "* Receiving and storing packets...";
         int i = 0;
         while (true) {
-
             Tins::PDU* received = iface.receive_tins();
             if (received == NULL) {
                 break;

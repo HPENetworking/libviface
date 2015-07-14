@@ -104,7 +104,7 @@ class VIface
             std::string name = "viface%d",
             bool tap = true,
             int id = -1
-        );
+            );
         ~VIface();
 
         /**
