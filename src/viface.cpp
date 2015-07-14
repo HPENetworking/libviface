@@ -85,6 +85,26 @@ string hexdump(vector<uint8_t> const& bytes)
     return buff.str();
 }
 
+uint32_t crc32(vector<uint8_t> const& bytes)
+{
+    static uint32_t crc_table[] = {
+        0x4DBDF21C, 0x500AE278, 0x76D3D2D4, 0x6B64C2B0,
+        0x3B61B38C, 0x26D6A3E8, 0x000F9344, 0x1DB88320,
+        0xA005713C, 0xBDB26158, 0x9B6B51F4, 0x86DC4190,
+        0xD6D930AC, 0xCB6E20C8, 0xEDB71064, 0xF0000000
+    };
+
+    uint32_t crc = 0;
+    const uint8_t* data = &bytes[0];
+
+    for (uint32_t i = 0; i < bytes.size(); ++i) {
+        crc = (crc >> 4) ^ crc_table[(crc ^ data[i]) & 0x0F];
+        crc = (crc >> 4) ^ crc_table[(crc ^ (data[i] >> 4)) & 0x0F];
+    }
+
+    return crc;
+}
+
 
 /*= Helpers ==================================================================*/
 
@@ -196,7 +216,7 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
 
     // Check name length
     if (name.length() >= IFNAMSIZ) {
-        throw invalid_argument("Virtual interface name too long.");
+        throw invalid_argument("--- Virtual interface name too long.");
     }
 
     // Create queues and assign name

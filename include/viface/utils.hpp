@@ -50,12 +50,20 @@ std::vector<uint8_t> parse_mac(std::string const& mac);
 /**
  * Build a hexdump representation of a binary blob.
  *
- * @param[in]  bytes Binary blob (array of bytes) with the message to
- *             build represention.
+ * @param[in]  bytes Binary blob (array of bytes) with the data to build
+ *             representation.
  *
  * @return A string with the hexdump representation of the input binary blob.
  */
 std::string hexdump(std::vector<uint8_t> const& bytes);
+
+/**
+ * Calculate the 32 bit CRC of the given binary blob.
+ *
+ * @param[in]  bytes Binary blob (array of bytes) with the data to calculate
+ *             the 32 bit CRC.
+ */
+uint32_t crc32(std::vector<uint8_t> const& bytes);
 
 /** @} */ // End of libviface
 };
