@@ -20,7 +20,9 @@ network interfaces in Linux based Operating Systems.
    iface.up();
 
 Then you can ``send()``, ``receive()`` or setup a ``dispath()`` callback to
-handle virtual interfaces incoming and outgoing packets.
+handle virtual interfaces incoming and outgoing packets. Also, interface
+statistics (rx/tx packets, bytes, etc) are available to read using
+``readStat()`` and related functions.
 
 For a complete overview check the reference documentation and examples.
 
@@ -48,8 +50,6 @@ Build
 Improvements
 ============
 
-- Add support to setup IPv4 netmask.
-- Add support to setup IPv4 broadcast address.
 - Add support to setup all IPv6 related.
 - Improve and fix possible race conditions when up/down is issued (and thus
   packet buffer based on MTU is resized) and a dispatcher is active or any

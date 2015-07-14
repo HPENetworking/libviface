@@ -71,6 +71,8 @@ class VIfaceImpl
         uint id;
         string mac;
         string ipv4;
+        string netmask;
+        string broadcast;
         uint mtu;
 
         map<string,uint64_t> stats_cache;
@@ -105,6 +107,8 @@ class VIfaceImpl
         void setMAC(string mac);
 
         string getMAC() const;
+
+        string ioctlGetIPv4(unsigned long request) const;
 
         void setIPv4(string ipv4);
 

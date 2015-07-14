@@ -308,7 +308,7 @@ void VIfaceImpl::setIPv4(string ipv4)
     return;
 }
 
-string VIfaceImpl::getIPv4() const
+string VIfaceImpl::ioctlGetIPv4(unsigned long request) const
 {
     ostringstream what;
 
@@ -316,7 +316,7 @@ string VIfaceImpl::getIPv4() const
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, ifr);
 
-    if (ioctl(this->kernel_socket, SIOCGIFADDR, &ifr) != 0) {
+    if (ioctl(this->kernel_socket, request, &ifr) != 0) {
         what << "--- Unable to get IPv4 for " << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -338,28 +338,51 @@ string VIfaceImpl::getIPv4() const
     return string(addr);
 }
 
+string VIfaceImpl::getIPv4() const
+{
+    return this->ioctlGetIPv4(SIOCGIFADDR);
+}
+
 void VIfaceImpl::setIPv4Netmask(string netmask)
 {
-    // FIXME: Implement!
+    // Validate format
+    struct in_addr addr;
+
+    if (!inet_pton(AF_INET, netmask.c_str(), &addr)) {
+        ostringstream what;
+        what << "--- Invalid IPv4 netmask (" << netmask << ") for ";
+        what << this->name << "." << endl;
+        throw invalid_argument(what.str());
+    }
+
+    this->netmask = netmask;
     return;
 }
 
 string VIfaceImpl::getIPv4Netmask() const
 {
-    // FIXME: Implement!
-    return string();
+    return this->ioctlGetIPv4(SIOCGIFNETMASK);
 }
 
 void VIfaceImpl::setIPv4Broadcast(string broadcast)
 {
-    // FIXME: Implement!
+    // Validate format
+    struct in_addr addr;
+
+    if (!inet_pton(AF_INET, broadcast.c_str(), &addr)) {
+        ostringstream what;
+        what << "--- Invalid IPv4 address (" << broadcast << ") for ";
+        what << this->name << "." << endl;
+        throw invalid_argument(what.str());
+    }
+
+    this->broadcast = broadcast;
     return;
 }
 
 string VIfaceImpl::getIPv4Broadcast() const
 {
-    // FIXME: Implement!
-    return string();
+    return this->ioctlGetIPv4(SIOCGIFBRDADDR);
 }
 
 void VIfaceImpl::setMTU(uint mtu)
@@ -427,30 +450,70 @@ void VIfaceImpl::up()
             ifr.ifr_hwaddr.sa_data[i] = mac_bin[i];
         }
         if (ioctl(this->kernel_socket, SIOCSIFHWADDR, &ifr) != 0) {
-            what << "--- Unable to set MAC Address (" << this->mac << ") for ";
-            what << this->name << "." << endl;
+            what << "--- Unable to set MAC Address (" << this->mac;
+            what << ") for " << this->name << "." << endl;
             what << "    Error: " << strerror(errno);
             what << " (" << errno << ")." << endl;
             throw runtime_error(what.str());
         }
     }
 
-    // Set IPv4
-    if (!this->ipv4.empty()) {
-        struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
+    // Set IPv4 related
+    // FIXME: Refactor this, is ugly :/
+    struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
+    addr->sin_family = AF_INET;
 
-        addr->sin_family = AF_INET;
+    // Address
+    if (!this->ipv4.empty()) {
+
         if (!inet_pton(AF_INET, this->ipv4.c_str(), &addr->sin_addr)) {
-            what << "--- Invalid cached IPv4 address (" << this->ipv4 <<
-            ") for ";
-            what << this->name << "." << endl;
+            what << "--- Invalid cached IPv4 address (" << this->ipv4;
+            what << ") for " << this->name << "." << endl;
             what << "    Something really bad happened :/" << endl;
             throw runtime_error(what.str());
         }
 
         if (ioctl(this->kernel_socket, SIOCSIFADDR, &ifr) != 0) {
-            what << "--- Unable to set IPv4 (" << this->ipv4 << ") for ";
-            what << this->name << "." << endl;
+            what << "--- Unable to set IPv4 (" << this->ipv4;
+            what << ") for " << this->name << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+    }
+
+    // Netmask
+    if (!this->netmask.empty()) {
+
+        if (!inet_pton(AF_INET, this->netmask.c_str(), &addr->sin_addr)) {
+            what << "--- Invalid cached IPv4 netmask (" << this->netmask;
+            what << ") for " << this->name << "." << endl;
+            what << "    Something really bad happened :/" << endl;
+            throw runtime_error(what.str());
+        }
+
+        if (ioctl(this->kernel_socket, SIOCSIFNETMASK, &ifr) != 0) {
+            what << "--- Unable to set IPv4 netmask (" << this->netmask;
+            what << ") for " << this->name << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+    }
+
+    // Broadcast
+    if (!this->broadcast.empty()) {
+
+        if (!inet_pton(AF_INET, this->broadcast.c_str(), &addr->sin_addr)) {
+            what << "--- Invalid cached IPv4 broadcast (" << this->broadcast;
+            what << ") for " << this->name << "." << endl;
+            what << "    Something really bad happened :/" << endl;
+            throw runtime_error(what.str());
+        }
+
+        if (ioctl(this->kernel_socket, SIOCSIFBRDADDR, &ifr) != 0) {
+            what << "--- Unable to set IPv4 broadcast (" << this->broadcast;
+            what << ") for " << this->name << "." << endl;
             what << "    Error: " << strerror(errno);
             what << " (" << errno << ")." << endl;
             throw runtime_error(what.str());

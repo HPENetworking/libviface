@@ -8,6 +8,8 @@ TEST_CASE("Create")
     std::string name = "viface%d";
     std::string mac = "66:23:2d:28:c6:84";
     std::string ipv4 = "192.168.20.21";
+    std::string netmask = "255.255.255.0";
+    std::string broadcast = "192.168.20.255";
 
     viface::VIface iface(name);
 
@@ -15,8 +17,10 @@ TEST_CASE("Create")
     REQUIRE(iface.getName() == "viface0");
 
     // Configure interface
-    REQUIRE_NOTHROW(iface.setIPv4(ipv4));
     REQUIRE_NOTHROW(iface.setMAC(mac));
+    REQUIRE_NOTHROW(iface.setIPv4(ipv4));
+    REQUIRE_NOTHROW(iface.setIPv4Netmask(netmask));
+    REQUIRE_NOTHROW(iface.setIPv4Broadcast(broadcast));
 
     // Bring-up interface
     REQUIRE_NOTHROW(iface.up());
@@ -26,6 +30,8 @@ TEST_CASE("Create")
     REQUIRE(iface.getMTU() == 1500);
     REQUIRE(iface.getMAC() == mac);
     REQUIRE(iface.getIPv4() == ipv4);
+    REQUIRE(iface.getIPv4Netmask() == netmask);
+    REQUIRE(iface.getIPv4Broadcast() == broadcast);
 
     // List statistics keys
     std::set<std::string> stats = iface.listStats();
