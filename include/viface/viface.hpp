@@ -135,7 +135,7 @@ class VIface
          * @return always void.
          *         An exception is thrown in case of malformed argument.
          */
-        void setMAC(std::string mac = "");
+        void setMAC(std::string mac);
 
         /**
          * Getter method for virtual interface associated MAC Address.
@@ -157,7 +157,7 @@ class VIface
          * @return always void.
          *         An exception is thrown in case of malformed argument.
          */
-        void setIPv4(std::string ipv4 = "");
+        void setIPv4(std::string ipv4);
 
         /**
          * Getter method for virtual interface associated IPv4 Address.
@@ -179,7 +179,7 @@ class VIface
          *         An exception is thrown in case of bad range MTU
          *         ([68, 65536]).
          */
-        void setMTU(uint mtu = 1500);
+        void setMTU(uint mtu);
 
         /**
          * Getter method for virtual interface associated maximum transmission

@@ -53,8 +53,6 @@ Improvements
 - Add support to setup all IPv6 related.
 - Add support to read (and clear?) counters.
   Note : /sys/class/net/{name}/statistics/{counter}
-- Provide an example for libtins integration.
-- Provide an example for libpcap integration.
 - Improve and fix possible race conditions when up/down is issued (and thus
   packet buffer based on MTU is resized) and a dispatcher is active or any
   other IO is active.

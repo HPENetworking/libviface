@@ -206,14 +206,6 @@ uint VIfaceImpl::idseq = 0;
 
 VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
 {
-    // Set id
-    if (id < 0) {
-        this->id = this->idseq;
-    } else {
-        this->id = id;
-    }
-    this->idseq++;
-
     // Check name length
     if (name.length() >= IFNAMSIZ) {
         throw invalid_argument("--- Virtual interface name too long.");
@@ -236,17 +228,21 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
         what << " (" << errno << ")." << endl;
         throw runtime_error(what.str());
     }
+
+    // Set id
+    if (id < 0) {
+        this->id = this->idseq;
+    } else {
+        this->id = id;
+    }
+    this->idseq++;
+
+    // Other defaults
+    this->mtu = 1500;
 }
 
 void VIfaceImpl::setMAC(string mac)
 {
-    ostringstream what;
-
-    // Ignore non-set MAC address
-    if (mac.length() == 0) {
-        return;
-    }
-
     vector<uint8_t> mac_bin = parse_mac(mac);
     this->mac = mac;
     return;
@@ -254,13 +250,12 @@ void VIfaceImpl::setMAC(string mac)
 
 string VIfaceImpl::getMAC() const
 {
-    ostringstream what;
-
     // Read interface flags
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, ifr);
 
     if (ioctl(this->kernel_socket, SIOCGIFHWADDR, &ifr) != 0) {
+        ostringstream what;
         what << "--- Unable to get MAC addr for " << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -281,18 +276,11 @@ string VIfaceImpl::getMAC() const
 
 void VIfaceImpl::setIPv4(string ipv4)
 {
-    ostringstream what;
-
-    // Ignore non-set IPv4 address
-    if (ipv4.length() == 0) {
-        return;
-    }
-
     // Validate format
-    struct ifreq ifr;
-    memset(&ifr, 0, sizeof(struct ifreq));
-    struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
-    if (!inet_pton(AF_INET, ipv4.c_str(), &addr->sin_addr)) {
+    struct in_addr addr;
+
+    if (!inet_pton(AF_INET, ipv4.c_str(), &addr)) {
+        ostringstream what;
         what << "--- Invalid IPv4 address (" << ipv4 << ") for ";
         what << this->name << "." << endl;
         throw invalid_argument(what.str());
@@ -453,8 +441,6 @@ void VIfaceImpl::up()
 
 void VIfaceImpl::down() const
 {
-    ostringstream what;
-
     // Read interface flags
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, ifr);
@@ -462,6 +448,7 @@ void VIfaceImpl::down() const
     // Bring-down interface
     ifr.ifr_flags &= ~IFF_UP;
     if (ioctl(this->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
+        ostringstream what;
         what << "--- Unable to bring-down interface " << this->name;
         what << "." << endl;
         what << "    Error: " << strerror(errno);
@@ -474,8 +461,6 @@ void VIfaceImpl::down() const
 
 bool VIfaceImpl::isUp() const
 {
-    ostringstream what;
-
     // Read interface flags
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, ifr);
@@ -548,7 +533,6 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
     int written = write(this->queues.tx, &packet[0], size);
 
     if (written != size) {
-        ostringstream what;
         what << "--- IO error while writting to " << this->name;
         what << "." << endl;
         what << "    Error: " << strerror(errno);
@@ -669,12 +653,7 @@ void dispatch(set<VIface*>& ifaces, dispatcher_cb callback, int millis)
 
 VIface::VIface(string name, bool tap, int id) :
     pimpl(new VIfaceImpl(name, tap, id))
-{
-    // Set default values
-    this->setMAC();
-    this->setIPv4();
-    this->setMTU();
-}
+{}
 VIface::~VIface() = default;
 
 string VIface::getName() const {
