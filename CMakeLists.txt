@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 project("libviface")
 
 # The version number
-set(libviface_VERSION_STRING "0.1.0-dev")
+set(libviface_VERSION_STRING "1.0.0")
 
 # Setup project variables
 set(VIFACE_TESTS ON CACHE BOOL "Enable compilation of unit tests.")
@@ -65,7 +65,7 @@ endif(VIFACE_EXAMPLES)
 # Specify public interface install directory
 install(
     FILES
-    "${libviface_SOURCE_DIR}/include/viface/libviface.hpp"
+    "${libviface_SOURCE_DIR}/include/viface/viface.hpp"
     "${CMAKE_BINARY_DIR}/include/viface/config.hpp"
     DESTINATION
     include/libviface
