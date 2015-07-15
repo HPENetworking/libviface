@@ -68,10 +68,11 @@ typedef std::function<bool (std::string const& name, uint id,
  *             forever.
  *
  * @return always void.
- *         This call blocks forever UNLESS one of two situations are in place:
+ *         This call blocks forever UNLESS one of three situations are in place:
  *         - A signal is received, in which case is user's responsibility to
  *           recall the dispatch function or to stop execution.
- *         - A millis timeout value >= 0 is given and this
+ *         - A millis timeout value >= 0 is given and the timeout is reached.
+ *         - The callback request termination by returning false.
  */
 void dispatch(std::set<VIface*>& ifaces, dispatcher_cb callback,
               int millis = -1);
