@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 project("libviface")
 
 # The version number
-set(libviface_VERSION_STRING "1.0.0")
+set(libviface_VERSION_STRING "1.1.0")
 
 # Setup project variables
 set(VIFACE_TESTS ON CACHE BOOL "Enable compilation of unit tests.")
