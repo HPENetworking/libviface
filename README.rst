@@ -1,6 +1,6 @@
-====================================================================
-``libviface`` C++ bindings for Linux tun/tap and netdevice interface
-====================================================================
+==================================================================
+libviface : C++ bindings for Linux tun/tap and netdevice interface
+==================================================================
 
 ``libviface`` is a small library that allows to create and configure virtual
 network interfaces in Linux based Operating Systems.
@@ -50,7 +50,6 @@ Build
 Improvements
 ============
 
-- Add support to setup all IPv6 related.
 - Improve and fix possible race conditions when up/down is issued (and thus
   packet buffer based on MTU is resized) and a dispatcher is active or any
   other IO is active.
