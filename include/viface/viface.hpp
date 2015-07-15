@@ -348,6 +348,12 @@ class VIface
         /**
          * Clear given statistic for this interface.
          *
+         * Please note that this feature is implemented in library as there is
+         * currently no way to clear them (except by destroying the interface).
+         * If you clear the statistics using this method, subsequent calls to
+         * readStat() results will differ from, for example, those reported
+         * by tools like ifconfig.
+         *
          * @param[in]  stat statistic name. See listStats().
          *
          * @return always void.
