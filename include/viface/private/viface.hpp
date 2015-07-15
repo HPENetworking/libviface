@@ -53,18 +53,26 @@ using namespace viface;
 
 namespace viface
 {
-typedef struct
+struct in6_ifreq
+{
+    struct in6_addr ifr6_addr;
+    uint32_t ifr6_prefixlen;
+    int ifr6_ifindex;
+};
+
+struct viface_queues
 {
     int rx;
     int tx;
-} viface_queues_t;
+};
 
 class VIfaceImpl
 {
     private:
 
-        viface_queues_t queues;
+        struct viface_queues queues;
         int kernel_socket;
+        int kernel_socket_ipv6;
         vector<uint8_t> pktbuff;
 
         string name;
@@ -73,6 +81,7 @@ class VIfaceImpl
         string ipv4;
         string netmask;
         string broadcast;
+        string ipv6;
         uint mtu;
 
         map<string,uint64_t> stats_cache;
@@ -121,6 +130,8 @@ class VIfaceImpl
         void setIPv4Broadcast(string broadcast);
 
         string getIPv4Broadcast() const;
+
+        void setIPv6(string ipv6);
 
         void setMTU(uint mtu);
 

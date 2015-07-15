@@ -130,7 +130,7 @@ static void read_flags(int sockfd, string name, struct ifreq& ifr)
     }
 }
 
-static string alloc_viface(string name, bool tap, viface_queues_t* queues)
+static string alloc_viface(string name, bool tap, struct viface_queues* queues)
 {
     int i = 0;
     int fd = -1;
@@ -215,17 +215,28 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
     }
 
     // Create queues and assign name
-    viface_queues_t queues;
-    memset(&queues, 0, sizeof(viface_queues_t));
+    struct viface_queues queues;
+    memset(&queues, 0, sizeof(struct viface_queues));
     this->name = alloc_viface(name, tap, &queues);
     this->queues = queues;
 
-    // Create socket channel to the NET kernel for later ioctl
+    // Create socket channels to the NET kernel for later ioctl
     this->kernel_socket = -1;
     this->kernel_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (this->kernel_socket < 0) {
         ostringstream what;
-        what << "--- Unable to create socket channel to the NET kernel.";
+        what << "--- Unable to create IPv4 socket channel to the NET kernel.";
+        what << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    this->kernel_socket_ipv6 = -1;
+    this->kernel_socket_ipv6 = socket(AF_INET6, SOCK_STREAM, 0);
+    if (this->kernel_socket_ipv6 < 0) {
+        ostringstream what;
+        what << "--- Unable to create IPv6 socket channel to the NET kernel.";
         what << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -248,7 +259,8 @@ VIfaceImpl::~VIfaceImpl()
 {
     if (close(this->queues.rx) ||
         close(this->queues.tx) ||
-        close(this->kernel_socket)) {
+        close(this->kernel_socket) ||
+        close(this->kernel_socket_ipv6)) {
         ostringstream what;
         what << "--- Unable to close file descriptors for interface ";
         what << this->name << "." << endl;
@@ -407,6 +419,22 @@ void VIfaceImpl::setMTU(uint mtu)
     return;
 }
 
+void VIfaceImpl::setIPv6(string ipv6)
+{
+    // Validate format
+    struct in6_addr addr6;
+
+    if (!inet_pton(AF_INET6, ipv6.c_str(), &addr6)) {
+        ostringstream what;
+        what << "--- Invalid IPv6 address (" << ipv6 << ") for ";
+        what << this->name << "." << endl;
+        throw invalid_argument(what.str());
+    }
+
+    this->ipv6 = ipv6;
+    return;
+}
+
 uint VIfaceImpl::getMTU() const
 {
     ostringstream what;
@@ -509,6 +537,43 @@ void VIfaceImpl::up()
 
         if (ioctl(this->kernel_socket, SIOCSIFBRDADDR, &ifr) != 0) {
             what << "--- Unable to set IPv4 broadcast (" << this->broadcast;
+            what << ") for " << this->name << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+    }
+
+    // Set IPv6 related
+    if (!this->ipv6.empty()) {
+        struct in6_ifreq ifr6;
+        memset(&ifr6, 0, sizeof(struct in6_ifreq));
+
+        struct sockaddr_in6* addr6 = (struct sockaddr_in6*) &ifr6.ifr6_addr;
+        addr6->sin6_family = AF_INET6;
+        addr6->sin6_port = 0;
+
+        // Parse IPv6 address into IPv6 address structure
+        if(!inet_pton(AF_INET6, this->ipv6.c_str(), &addr6->sin6_addr)) {
+            what << "--- Invalid cached IPv6 address (" << this->ipv6;
+            what << ") for " << this->name << "." << endl;
+            what << "    Something really bad happened :/" << endl;
+            throw runtime_error(what.str());
+        }
+
+        // Get interface index
+        if (ioctl(this->kernel_socket, SIOGIFINDEX, &ifr) < 0) {
+            what << "--- Unable to get interface index for (";
+            what << this->name << "." << endl;
+            what << "    Something really bad happened :/" << endl;
+            throw runtime_error(what.str());
+        }
+
+        // Set IPV6 address
+        ifr6.ifr6_ifindex = ifr.ifr_ifindex;
+        ifr6.ifr6_prefixlen = 64;
+        if (ioctl(this->kernel_socket_ipv6, SIOCSIFADDR, &ifr6) < 0) {
+            what << "--- Unable to set IPv6 address (" << this->ipv6;
             what << ") for " << this->name << "." << endl;
             what << "    Error: " << strerror(errno);
             what << " (" << errno << ")." << endl;
@@ -910,6 +975,10 @@ string VIface::getIPv4Broadcast() const
     return this->pimpl->getIPv4Broadcast();
 }
 
+void VIface::setIPv6(string ipv6)
+{
+    return this->pimpl->setIPv6(ipv6);
+}
 
 void VIface::setMTU(uint mtu)
 {
