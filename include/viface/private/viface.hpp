@@ -87,6 +87,7 @@ class VIfaceImpl
         set<string> ipv6s;
         uint mtu;
 
+        set<string> stats_keys_cache;
         map<string,uint64_t> stats_cache;
 
         static uint idseq;
@@ -152,7 +153,7 @@ class VIfaceImpl
 
         void send(vector<uint8_t>& packet) const;
 
-        set<string> listStats() const;
+        set<string> listStats();
 
         uint64_t readStatFile(string const& stat);
 

@@ -332,7 +332,7 @@ class VIface
          *         For example, {"rx_packets", "tx_bytes", ...}
          *         Exceptions can be thrown in case of generic IO errors.
          */
-        std::set<std::string> listStats() const;
+        std::set<std::string> listStats();
 
         /**
          * Read given statistic for this interface.

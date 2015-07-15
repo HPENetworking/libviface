@@ -765,7 +765,7 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
     return;
 }
 
-std::set<std::string> VIfaceImpl::listStats() const
+std::set<std::string> VIfaceImpl::listStats()
 {
     set<string> result;
 
@@ -804,6 +804,9 @@ std::set<std::string> VIfaceImpl::listStats() const
         throw runtime_error(what.str());
     }
 
+    // Update cache
+    this->stats_keys_cache = result;
+
     return result;
 }
 
@@ -811,11 +814,13 @@ uint64_t VIfaceImpl::readStatFile(string const& stat)
 {
     ostringstream what;
 
+    // If no cache exists, create it.
+    if (this->stats_keys_cache.empty()) {
+        this->listStats();
+    }
+
     // Check if stat is valid
-    // FIXME: Should we cache this in order to avoid a directory listing per
-    //        requested reading?
-    set<string> stats_keys = this->listStats();
-    if (stats_keys.find(stat) == stats_keys.end()) {
+    if (stats_keys_cache.find(stat) == stats_keys_cache.end()) {
         what << "--- Unknown statistic " << stat;
         what << " for interface " << this->name << endl;
         throw runtime_error(what.str());
@@ -1077,7 +1082,7 @@ void VIface::send(vector<uint8_t>& packet) const
     return this->pimpl->send(packet);
 }
 
-std::set<std::string> VIface::listStats() const
+std::set<std::string> VIface::listStats()
 {
     return this->pimpl->listStats();
 }
