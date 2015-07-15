@@ -1,16 +1,18 @@
 #define CATCH_CONFIG_MAIN
 
 #include "catch.hpp"
-#include "viface/viface.hpp"
+#include <viface/viface.hpp>
+
+using namespace std;
 
 TEST_CASE("Create")
 {
-    std::string name = "viface%d";
-    std::string mac = "66:23:2d:28:c6:84";
-    std::string ipv4 = "192.168.20.21";
-    std::string netmask = "255.255.255.0";
-    std::string broadcast = "192.168.20.255";
-    std::set<std::string> ipv6s = {
+    string name = "viface%d";
+    string mac = "66:23:2d:28:c6:84";
+    string ipv4 = "192.168.20.21";
+    string netmask = "255.255.255.0";
+    string broadcast = "192.168.20.255";
+    set<string> ipv6s = {
         "fe80::6423:2dff:fe28:c684",
         "fe80::6423:2dff:fe28:c666",
         "fe80::6423:2dff:fe28:c622"
@@ -40,16 +42,16 @@ TEST_CASE("Create")
     REQUIRE(iface.getIPv4Broadcast() == broadcast);
 
     // List IPv6 addresses
-    std::cout << "IPv6 Addresses found:" << std::endl;
-    std::set<std::string> ipv6_addrs = iface.getIPv6();
+    cout << "IPv6 Addresses found:" << endl;
+    set<string> ipv6_addrs = iface.getIPv6();
     for (auto & ipv6_addr : ipv6_addrs) {
-        std::cout << "    " << ipv6_addr << std::endl;
+        cout << "    " << ipv6_addr << endl;
     }
 
     // List statistics keys
-    std::set<std::string> stats = iface.listStats();
-    std::cout << "Statistics found:" << std::endl;
+    set<string> stats = iface.listStats();
+    cout << "Statistics found:" << endl;
     for (auto & key : stats) {
-        std::cout << "    " << key << " : " << iface.readStat(key) << std::endl;
+        cout << "    " << key << " : " << iface.readStat(key) << endl;
     }
 }
