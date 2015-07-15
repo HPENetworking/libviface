@@ -549,12 +549,8 @@ void VIfaceImpl::up()
         struct in6_ifreq ifr6;
         memset(&ifr6, 0, sizeof(struct in6_ifreq));
 
-        struct sockaddr_in6* addr6 = (struct sockaddr_in6*) &ifr6.ifr6_addr;
-        addr6->sin6_family = AF_INET6;
-        addr6->sin6_port = 0;
-
         // Parse IPv6 address into IPv6 address structure
-        if(!inet_pton(AF_INET6, this->ipv6.c_str(), &addr6->sin6_addr)) {
+        if(!inet_pton(AF_INET6, this->ipv6.c_str(), &ifr6.ifr6_addr)) {
             what << "--- Invalid cached IPv6 address (" << this->ipv6;
             what << ") for " << this->name << "." << endl;
             what << "    Something really bad happened :/" << endl;
