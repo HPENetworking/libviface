@@ -435,15 +435,70 @@ void VIfaceImpl::setIPv6(string ipv6)
     return;
 }
 
+set<string> VIfaceImpl::getIPv6() const
+{
+    // Return set
+    set<string> result;
+
+    // Buffer to store string representation of the address
+    char buff[INET6_ADDRSTRLEN];
+    memset(&buff, 0, sizeof(buff));
+
+    // Cast pointer to ipv6 address
+    struct sockaddr_in6* addr;
+
+    // Pointers to list head and current node
+    struct ifaddrs *head;
+    struct ifaddrs *node;
+
+    // Get list of interfaces
+    if (getifaddrs(&head) == -1) {
+        ostringstream what;
+        what << "--- Failed to get list of interface addresses." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Iterate list
+    for (node = head; node != NULL; node = node->ifa_next) {
+        if (node->ifa_addr == NULL) {
+            continue;
+        }
+        if (node->ifa_addr->sa_family != AF_INET6) {
+            continue;
+        }
+
+        if (string(node->ifa_name) != this->name) {
+            continue;
+        }
+
+        // Convert IPv6 address to string representation
+        addr = (struct sockaddr_in6*) node->ifa_addr;
+        if (inet_ntop(AF_INET6, &(addr->sin6_addr), buff, sizeof(buff)) == NULL) {
+            ostringstream what;
+            what << "--- Unable to convert IPv6 for " << this->name;
+            what << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+
+        result.insert(string(buff));
+    }
+    freeifaddrs(head);
+
+    return result;
+}
+
 uint VIfaceImpl::getMTU() const
 {
-    ostringstream what;
-
     // Read interface flags
     struct ifreq ifr;
     read_flags(this->kernel_socket, this->name, ifr);
 
     if (ioctl(this->kernel_socket, SIOCGIFMTU, &ifr) != 0) {
+        ostringstream what;
         what << "--- Unable to get MTU for " << this->name << "." << endl;
         what << "    Error: " << strerror(errno);
         what << " (" << errno << ")." << endl;
@@ -486,7 +541,7 @@ void VIfaceImpl::up()
     }
 
     // Set IPv4 related
-    // FIXME: Refactor this, is ugly :/
+    // FIXME: Refactor this, it's ugly :/
     struct sockaddr_in* addr = (struct sockaddr_in*) &ifr.ifr_addr;
     addr->sin_family = AF_INET;
 
@@ -545,6 +600,7 @@ void VIfaceImpl::up()
     }
 
     // Set IPv6 related
+    // FIXME: Refactor this, it's ugly :/
     if (!this->ipv6.empty()) {
         struct in6_ifreq ifr6;
         memset(&ifr6, 0, sizeof(struct in6_ifreq));
@@ -974,6 +1030,11 @@ string VIface::getIPv4Broadcast() const
 void VIface::setIPv6(string ipv6)
 {
     return this->pimpl->setIPv6(ipv6);
+}
+
+set<string> VIface::getIPv6() const
+{
+    return this->pimpl->getIPv6();
 }
 
 void VIface::setMTU(uint mtu)

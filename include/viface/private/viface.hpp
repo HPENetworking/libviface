@@ -45,6 +45,9 @@
 #include <linux/if_tun.h>
 #include <linux/if_arp.h>
 
+// Interfaces
+#include <ifaddrs.h>   // getifaddrs
+
 // Framework
 #include "viface/viface.hpp"
 
@@ -132,6 +135,8 @@ class VIfaceImpl
         string getIPv4Broadcast() const;
 
         void setIPv6(string ipv6);
+
+        set<string> getIPv6() const;
 
         void setMTU(uint mtu);
 

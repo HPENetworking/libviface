@@ -231,6 +231,15 @@ class VIface
         void setIPv6(std::string ipv6);
 
         /**
+         * Getter method for virtual interface associated IPv6 Addresses
+         * (note the plural).
+         *
+         * @return the current IPv6 addresses of the virtual interface.
+         *         An empty set means no associated IPv6 addresses.
+         */
+        std::set<std::string> getIPv6() const;
+
+        /**
          * Set the MTU of the virtual interface.
          *
          * The range of the MTU is verified, but is just until up() is called

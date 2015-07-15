@@ -34,7 +34,13 @@ TEST_CASE("Create")
     REQUIRE(iface.getIPv4() == ipv4);
     REQUIRE(iface.getIPv4Netmask() == netmask);
     REQUIRE(iface.getIPv4Broadcast() == broadcast);
-    //REQUIRE(iface.getIPv6() == ipv6);
+
+    // List IPv6 addresses
+    std::cout << "IPv6 Addresses found:" << std::endl;
+    std::set<std::string> ipv6_addrs = iface.getIPv6();
+    for (auto & ipv6_addr : ipv6_addrs) {
+        std::cout << "    " << ipv6_addr << std::endl;
+    }
 
     // List statistics keys
     std::set<std::string> stats = iface.listStats();

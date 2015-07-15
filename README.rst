@@ -1,6 +1,6 @@
-========================================================
-``libviface`` C++ bindings for C Linux tun/tap Interface
-========================================================
+====================================================================
+``libviface`` C++ bindings for Linux tun/tap and netdevice interface
+====================================================================
 
 ``libviface`` is a small library that allows to create and configure virtual
 network interfaces in Linux based Operating Systems.
