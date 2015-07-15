@@ -84,7 +84,7 @@ class VIfaceImpl
         string ipv4;
         string netmask;
         string broadcast;
-        string ipv6;
+        set<string> ipv6s;
         uint mtu;
 
         map<string,uint64_t> stats_cache;
@@ -134,7 +134,7 @@ class VIfaceImpl
 
         string getIPv4Broadcast() const;
 
-        void setIPv6(string ipv6);
+        void setIPv6(set<string> const& ipv6s);
 
         set<string> getIPv6() const;
 

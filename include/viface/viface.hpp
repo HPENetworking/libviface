@@ -217,18 +217,18 @@ class VIface
         std::string getIPv4Broadcast() const;
 
         /**
-         * Set the IPv6 address of the virtual interface.
+         * Set the IPv6 addresses of the virtual interface.
          *
-         * The format of the IPv6 address is verified, but is just until up()
-         * is called that the library will try to attempt to write it.
+         * The format of the IPv6 addresses are verified, but is just until
+         * up() is called that the library will try to attempt to write them.
          *
-         * @param[in]  ipv6 New IPv6 address for this virtual interface in the
-         *             form "::FFFF:204.152.189.116".
+         * @param[in]  ipv6s New IPv6 addresses for this virtual interface in
+         *             the form "::FFFF:204.152.189.116".
          *
          * @return always void.
          *         An exception is thrown in case of malformed argument.
          */
-        void setIPv6(std::string ipv6);
+        void setIPv6(std::set<std::string> const& ipv6s);
 
         /**
          * Getter method for virtual interface associated IPv6 Addresses

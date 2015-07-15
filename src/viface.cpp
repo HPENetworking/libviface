@@ -419,19 +419,21 @@ void VIfaceImpl::setMTU(uint mtu)
     return;
 }
 
-void VIfaceImpl::setIPv6(string ipv6)
+void VIfaceImpl::setIPv6(set<string> const& ipv6s)
 {
     // Validate format
     struct in6_addr addr6;
 
-    if (!inet_pton(AF_INET6, ipv6.c_str(), &addr6)) {
-        ostringstream what;
-        what << "--- Invalid IPv6 address (" << ipv6 << ") for ";
-        what << this->name << "." << endl;
-        throw invalid_argument(what.str());
+    for (auto & ipv6 : ipv6s) {
+        if (!inet_pton(AF_INET6, ipv6.c_str(), &addr6)) {
+            ostringstream what;
+            what << "--- Invalid IPv6 address (" << ipv6 << ") for ";
+            what << this->name << "." << endl;
+            throw invalid_argument(what.str());
+        }
     }
 
-    this->ipv6 = ipv6;
+    this->ipv6s = ipv6s;
     return;
 }
 
@@ -601,17 +603,9 @@ void VIfaceImpl::up()
 
     // Set IPv6 related
     // FIXME: Refactor this, it's ugly :/
-    if (!this->ipv6.empty()) {
+    if (!this->ipv6s.empty()) {
         struct in6_ifreq ifr6;
         memset(&ifr6, 0, sizeof(struct in6_ifreq));
-
-        // Parse IPv6 address into IPv6 address structure
-        if(!inet_pton(AF_INET6, this->ipv6.c_str(), &ifr6.ifr6_addr)) {
-            what << "--- Invalid cached IPv6 address (" << this->ipv6;
-            what << ") for " << this->name << "." << endl;
-            what << "    Something really bad happened :/" << endl;
-            throw runtime_error(what.str());
-        }
 
         // Get interface index
         if (ioctl(this->kernel_socket, SIOGIFINDEX, &ifr) < 0) {
@@ -620,16 +614,27 @@ void VIfaceImpl::up()
             what << "    Something really bad happened :/" << endl;
             throw runtime_error(what.str());
         }
-
-        // Set IPV6 address
         ifr6.ifr6_ifindex = ifr.ifr_ifindex;
         ifr6.ifr6_prefixlen = 64;
-        if (ioctl(this->kernel_socket_ipv6, SIOCSIFADDR, &ifr6) < 0) {
-            what << "--- Unable to set IPv6 address (" << this->ipv6;
-            what << ") for " << this->name << "." << endl;
-            what << "    Error: " << strerror(errno);
-            what << " (" << errno << ")." << endl;
-            throw runtime_error(what.str());
+
+        for (auto & ipv6 : this->ipv6s) {
+
+            // Parse IPv6 address into IPv6 address structure
+            if(!inet_pton(AF_INET6, ipv6.c_str(), &ifr6.ifr6_addr)) {
+                what << "--- Invalid cached IPv6 address (" << ipv6;
+                what << ") for " << this->name << "." << endl;
+                what << "    Something really bad happened :/" << endl;
+                throw runtime_error(what.str());
+            }
+
+            // Set IPv6 address
+            if (ioctl(this->kernel_socket_ipv6, SIOCSIFADDR, &ifr6) < 0) {
+                what << "--- Unable to set IPv6 address (" << ipv6;
+                what << ") for " << this->name << "." << endl;
+                what << "    Error: " << strerror(errno);
+                what << " (" << errno << ")." << endl;
+                throw runtime_error(what.str());
+            }
         }
     }
 
@@ -1027,9 +1032,9 @@ string VIface::getIPv4Broadcast() const
     return this->pimpl->getIPv4Broadcast();
 }
 
-void VIface::setIPv6(string ipv6)
+void VIface::setIPv6(set<string> const& ipv6s)
 {
-    return this->pimpl->setIPv6(ipv6);
+    return this->pimpl->setIPv6(ipv6s);
 }
 
 set<string> VIface::getIPv6() const

@@ -10,7 +10,11 @@ TEST_CASE("Create")
     std::string ipv4 = "192.168.20.21";
     std::string netmask = "255.255.255.0";
     std::string broadcast = "192.168.20.255";
-    std::string ipv6 = "fe80::6423:2dff:fe28:c666";
+    std::set<std::string> ipv6s = {
+        "fe80::6423:2dff:fe28:c684",
+        "fe80::6423:2dff:fe28:c666",
+        "fe80::6423:2dff:fe28:c622"
+    };
 
     viface::VIface iface(name);
 
@@ -22,7 +26,7 @@ TEST_CASE("Create")
     REQUIRE_NOTHROW(iface.setIPv4(ipv4));
     REQUIRE_NOTHROW(iface.setIPv4Netmask(netmask));
     REQUIRE_NOTHROW(iface.setIPv4Broadcast(broadcast));
-    REQUIRE_NOTHROW(iface.setIPv6(ipv6));
+    REQUIRE_NOTHROW(iface.setIPv6(ipv6s));
 
     // Bring-up interface
     REQUIRE_NOTHROW(iface.up());
