@@ -477,7 +477,8 @@ set<string> VIfaceImpl::getIPv6() const
 
         // Convert IPv6 address to string representation
         addr = (struct sockaddr_in6*) node->ifa_addr;
-        if (inet_ntop(AF_INET6, &(addr->sin6_addr), buff, sizeof(buff)) == NULL) {
+        if (inet_ntop(AF_INET6, &(addr->sin6_addr), buff,
+                      sizeof(buff)) == NULL) {
             ostringstream what;
             what << "--- Unable to convert IPv6 for " << this->name;
             what << "." << endl;
@@ -618,9 +619,8 @@ void VIfaceImpl::up()
         ifr6.ifr6_prefixlen = 64;
 
         for (auto & ipv6 : this->ipv6s) {
-
             // Parse IPv6 address into IPv6 address structure
-            if(!inet_pton(AF_INET6, ipv6.c_str(), &ifr6.ifr6_addr)) {
+            if (!inet_pton(AF_INET6, ipv6.c_str(), &ifr6.ifr6_addr)) {
                 what << "--- Invalid cached IPv6 address (" << ipv6;
                 what << ") for " << this->name << "." << endl;
                 what << "    Something really bad happened :/" << endl;
