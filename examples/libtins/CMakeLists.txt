@@ -7,12 +7,11 @@ if(LIBTINS_FOUND)
 
     # Allow to use libviface
     include_directories(
-        ${LIBTINS_INCLUDE_DIRS}
-        ${libviface_SOURCE_DIR}/include
+        "${LIBTINS_INCLUDE_DIRS}"
+        "${libviface_SOURCE_DIR}/include"
     )
     link_directories(
         ${LIBTINS_LIBRARY_DIRS}
-        ${libviface_SOURCE_DIR}/${LIB_NAME}
     )
 
     # Add source to the executable

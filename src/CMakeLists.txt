@@ -13,4 +13,9 @@ set_target_properties(
 target_link_libraries(${LIB_NAME})
 
 # Specify shared library install directory
-install(TARGETS ${LIB_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(
+    TARGETS
+    ${LIB_NAME}
+    DESTINATION
+    "${CMAKE_INSTALL_LIBDIR}"
+)

@@ -16,6 +16,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # Configure library install location
 set(CMAKE_INSTALL_LIBDIR lib)
+set(CMAKE_INSTALL_INCLUDEDIR include)
 if(VIFACE_FORCE_32BITS)
     set(CMAKE_INSTALL_LIBDIR lib32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
@@ -68,7 +69,7 @@ install(
     "${libviface_SOURCE_DIR}/include/viface/viface.hpp"
     "${CMAKE_BINARY_DIR}/include/viface/config.hpp"
     DESTINATION
-    include/libviface
+    "${CMAKE_INSTALL_INCLUDEDIR}/viface"
 )
 
 # Add API Reference generation

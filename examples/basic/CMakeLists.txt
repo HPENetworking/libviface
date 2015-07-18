@@ -1,11 +1,8 @@
 set(EXEC_NAME "basic")
 
 # Allow to use libviface
-include_directories (
-    ${libviface_SOURCE_DIR}/include
-)
-link_directories(
-    ${libviface_SOURCE_DIR}/${LIB_NAME}
+include_directories(
+    "${libviface_SOURCE_DIR}/include"
 )
 
 # Add source to the executable
