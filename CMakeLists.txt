@@ -14,9 +14,12 @@ set(VIFACE_FORCE_32BITS OFF CACHE BOOL "Force library compilation for 32 bits.")
 # Force C++11 compiler
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-# Configure library install location
+# Installation variables
 set(CMAKE_INSTALL_LIBDIR lib)
 set(CMAKE_INSTALL_INCLUDEDIR include)
+set(CMAKE_INSTALL_BINDIR bin)
+
+# Configure library install location
 if(VIFACE_FORCE_32BITS)
     set(CMAKE_INSTALL_LIBDIR lib32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")

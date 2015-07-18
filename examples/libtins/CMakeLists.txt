@@ -10,7 +10,7 @@ if(LIBTINS_FOUND)
         "${LIBTINS_INCLUDE_DIRS}"
     )
     link_directories(
-        ${LIBTINS_LIBRARY_DIRS}
+        "${LIBTINS_LIBRARY_DIRS}"
     )
 
     # Add source to the executable
