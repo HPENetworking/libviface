@@ -30,7 +30,6 @@ namespace viface
 {
 namespace utils
 {
-
 /**
  * @ingroup libviface Public Interface
  * @{
