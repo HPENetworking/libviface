@@ -9,9 +9,6 @@ set_target_properties(
     ${LIB_NAME} PROPERTIES VERSION ${libviface_VERSION_STRING}
 )
 
-# Link the library code all together
-target_link_libraries(${LIB_NAME})
-
 # Specify shared library install directory
 install(
     TARGETS

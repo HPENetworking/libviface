@@ -8,7 +8,6 @@ if(LIBTINS_FOUND)
     # Allow to use libviface
     include_directories(
         "${LIBTINS_INCLUDE_DIRS}"
-        "${libviface_SOURCE_DIR}/include"
     )
     link_directories(
         ${LIBTINS_LIBRARY_DIRS}
