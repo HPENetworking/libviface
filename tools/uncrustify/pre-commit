@@ -39,5 +39,5 @@ fi
 
 # Print files that failed
 echo "Please run:"
-echo "${ROOT}/tools/uncrustify/uncrustify.sh ${FAILED[*]// /|}"
+echo "pushd ${ROOT} && ./tools/uncrustify/uncrustify.sh ${FAILED[*]// /|} && popd"
 exit 1
