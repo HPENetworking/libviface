@@ -129,7 +129,7 @@ int main(int argc, const char* argv[])
         stats.assign(stats_set.begin(), stats_set.end());
         sort(stats.begin(), stats.end());
 
-        // Print statistics before send packets
+        // Print statistics before quitting
         cout << "* Statistics:" << endl;
         for (auto & key : stats) {
             cout << "    " << key << " : ";
