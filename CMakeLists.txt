@@ -58,11 +58,11 @@ include_directories("${CMAKE_BINARY_DIR}/include/")
 # Specify source directory
 add_subdirectory("${libviface_SOURCE_DIR}/src/")
 if(VIFACE_TESTS)
-    message("-- Including libviface test suite...")
+    message(STATUS "Including libviface test suite...")
     add_subdirectory("${libviface_SOURCE_DIR}/test/")
 endif(VIFACE_TESTS)
 if(VIFACE_EXAMPLES)
-    message("-- Including libviface examples...")
+    message(STATUS "Including libviface examples...")
     add_subdirectory("${libviface_SOURCE_DIR}/examples/")
 endif(VIFACE_EXAMPLES)
 
@@ -91,3 +91,18 @@ if(DOXYGEN_FOUND)
         COMMENT "Generating API Reference documentation..." VERBATIM
     )
 endif(DOXYGEN_FOUND)
+
+# Setup Git hooks
+if(EXISTS ${CMAKE_SOURCE_DIR}/.git/hooks)
+
+    # Setup our git hooks to avoid people from checking in code against the
+    # Coding Standard (at least syntactically)
+    if(NOT EXISTS ${CMAKE_SOURCE_DIR}/.git/hooks/pre-commit)
+
+        message(STATUS "Installing Coding Standard pre-commit hook...")
+        execute_process(
+            COMMAND ln -s ../../tools/uncrustify/pre-commit ${CMAKE_SOURCE_DIR}/.git/hooks/pre-commit
+            COMMAND chmod 0755 ${CMAKE_SOURCE_DIR}/.git/hooks/pre-commit
+        )
+    endif()
+endif()

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -o errexit # Error on any command error
+set -o nounset # Fail if variable unbound
+
+ROOT="$(git rev-parse --show-toplevel)"
+UCFG="${ROOT}/tools/uncrustify/uncrustify.cfg"
+FAILED=()
+
+# Stash all non staged changes
+git diff --full-index --binary > /tmp/stash.$$
+git stash -q --keep-index
+
+echo "Analysing coding standard ..."
+
+while read -r file ; do
+
+    # Compare staged file with uncrutifyed version
+    diff <(uncrustify -q -c "${UCFG}" -f "${file}") <(cat "${file}") > /dev/null && rc=$? || rc=$?
+    if [ ${rc} != 0 ] ; then
+        echo "[FAIL] ${file}"
+        FAILED+=(${file})
+    else
+        echo "[PASS] ${file}"
+    fi
+
+done < <(git diff-index --cached --name-only HEAD --diff-filter=ACMR | egrep "\.(c|h|cpp|hpp)$")
+
+# Unstash workspace
+# Note: git apply can fail if no unstaged files exists
+git apply --whitespace=nowarn < /tmp/stash.$$ 2> /dev/null || true
+git stash drop -q
+rm /tmp/stash.$$
+
+# Check if all files passed
+if [ ${#FAILED[@]} -eq 0 ]; then
+    exit 0
+fi
+
+# Print files that failed
+echo "Please run:"
+echo "${ROOT}/tools/uncrustify/uncrustify.sh ${FAILED[*]// /|}"
+exit 1
