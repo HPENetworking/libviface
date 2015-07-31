@@ -3,6 +3,10 @@
 set -o errexit # Error on any command error
 set -o nounset # Fail if variable unbound
 
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+NO_COLOUR="\033[0m"
+
 ROOT="$(git rev-parse --show-toplevel)"
 UCFG="${ROOT}/tools/uncrustify/uncrustify.cfg"
 FAILED=()
@@ -18,10 +22,10 @@ while read -r file ; do
     # Compare staged file with uncrutifyed version
     diff <(uncrustify -q -c "${UCFG}" -f "${file}") <(cat "${file}") > /dev/null && rc=$? || rc=$?
     if [ ${rc} != 0 ] ; then
-        echo "[FAIL] ${file}"
-        FAILED+=(${file})
+        echo -e "${RED}[FAIL]${NO_COLOUR} ${file}"
+        FAILED+=("${file}")
     else
-        echo "[PASS] ${file}"
+        echo -e "${GREEN}[PASS]${NO_COLOUR} ${file}"
     fi
 
 done < <(git diff-index --cached --name-only HEAD --diff-filter=ACMR | egrep "\.(c|h|cpp|hpp)$")
