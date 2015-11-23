@@ -202,6 +202,64 @@ err:
     throw runtime_error(what.str());
 }
 
+static void hook_viface(string name, struct viface_queues* queues)
+{
+    const int NUMBER_SOCKETS = 2;
+    const char *if_name = name.c_str();
+
+    struct ifreq ifr;
+    struct sockaddr_ll socket_addr;
+
+    int index_socket;
+    ostringstream what;
+
+    // Creates Tx/Rx sockets and allocates queues
+    for (index_socket = 0; index_socket < NUMBER_SOCKETS; index_socket++) {
+        // Creates the socket
+        int socket_fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+
+        if (socket_fd < 0) {
+            what << "--- Unable to create the Tx/Rx socket channel." << endl;
+            what << "Index: " << index_socket << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+
+        //Copies the network interface name to ifr_name
+        size_t if_name_len = strlen(if_name);
+        memcpy(ifr.ifr_name, if_name, if_name_len);
+        ifr.ifr_name[if_name_len] = 0;
+
+        // Obtains the network index number
+        if (ioctl(socket_fd, SIOCGIFINDEX, &ifr) == -1) {
+            ostringstream what;
+            what << "--- Unable to get network index number for '" << name <<
+            "'." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+
+        memset(&socket_addr, 0, sizeof(struct sockaddr_ll));
+        socket_addr.sll_family = AF_PACKET;
+        socket_addr.sll_protocol = htons(ETH_P_ALL);
+        socket_addr.sll_ifindex = ifr.ifr_ifindex;
+
+        // Binds the socket to the 'socket_addr' address
+        if (bind(socket_fd, (struct sockaddr*) &socket_addr,
+                 sizeof(socket_addr)) < 0) {
+            what << "--- Unable to bind the Tx/Rx socket channel to the '" <<
+            name << "' network interface" << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            throw runtime_error(what.str());
+        }
+
+        ((int *)queues)[index_socket] = socket_fd;
+    }
+}
+
 
 /*= Virtual Interface Implementation =========================================*/
 
@@ -209,15 +267,34 @@ uint VIfaceImpl::idseq = 0;
 
 VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
 {
+    const string NETWORK_INTERFACES_PATH = "/sys/class/net/";
+
     // Check name length
     if (name.length() >= IFNAMSIZ) {
         throw invalid_argument("--- Virtual interface name too long.");
     }
 
-    // Create queues and assign name
+    // Create queues
     struct viface_queues queues;
     memset(&queues, 0, sizeof(struct viface_queues));
-    this->name = alloc_viface(name, tap, &queues);
+
+    // Path of the network interface to look at
+    string interface_node = NETWORK_INTERFACES_PATH + name;
+
+    // Other defaults
+    this->mtu = 1500;
+
+    /* Checks if the path name can be accessed. If so,
+     * it means that the network interface is already defined.
+     */
+    if (access(interface_node.c_str(), F_OK) == 0) {
+        hook_viface(name, &queues);
+        this->name = name;
+        this->pktbuff.resize(this->mtu);
+    } else {
+        this->name = alloc_viface(name, tap, &queues);
+    }
+
     this->queues = queues;
 
     // Create socket channels to the NET kernel for later ioctl
@@ -250,9 +327,6 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
         this->id = id;
     }
     this->idseq++;
-
-    // Other defaults
-    this->mtu = 1500;
 }
 
 VIfaceImpl::~VIfaceImpl()
