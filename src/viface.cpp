@@ -252,7 +252,7 @@ err:
     throw runtime_error(what.str());
 }
 
-static string hook_viface(string name, struct viface_queues* queues)
+static void hook_viface(string name, struct viface_queues* queues)
 {
     int i = 0;
     int fd = -1;
@@ -306,7 +306,7 @@ static string hook_viface(string name, struct viface_queues* queues)
         ((int *)queues)[i] = fd;
     }
 
-    return name;
+    return;
 
 err:
     // Rollback close file descriptors
