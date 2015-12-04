@@ -130,12 +130,12 @@ static void read_flags(int sockfd, string name, struct ifreq& ifr)
     }
 }
 
-static uint read_mtu(string name, size_t count)
+static uint read_mtu(string name, size_t size_bytes)
 {
     int fd = -1;
     int nread = -1;
     ostringstream what;
-    char buffer[count + 1];
+    char buffer[size_bytes + 1];
 
     // Opens MTU file
     fd = open(("/sys/class/net/" + name + "/mtu").c_str(),
@@ -150,8 +150,8 @@ static uint read_mtu(string name, size_t count)
     }
 
     // Reads MTU value
-    nread = read(fd, &buffer[0], count);
-    buffer[count] = 0;
+    nread = read(fd, &buffer, size_bytes);
+    buffer[size_bytes] = '\0';
 
     // Handles errors
     if (nread == -1) {
@@ -163,6 +163,10 @@ static uint read_mtu(string name, size_t count)
     }
 
     if (close(fd) < 0) {
+        what << "--- Unable to close MTU file for '";
+        what << name << "' network interface." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
         goto err;
     }
 
@@ -170,12 +174,7 @@ static uint read_mtu(string name, size_t count)
 
 err:
     // Rollback close file descriptor
-    if (close(fd) < 0) {
-        what << "--- Unable to close MTU file for '";
-        what << name << "' network interface." << endl;
-        what << "    Error: " << strerror(errno);
-        what << " (" << errno << ")." << endl;
-    }
+    close(fd);
 
     throw runtime_error(what.str());
 }
