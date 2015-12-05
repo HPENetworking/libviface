@@ -130,6 +130,55 @@ static void read_flags(int sockfd, string name, struct ifreq& ifr)
     }
 }
 
+static uint read_mtu(string name, size_t size_bytes)
+{
+    int fd = -1;
+    int nread = -1;
+    ostringstream what;
+    char buffer[size_bytes + 1];
+
+    // Opens MTU file
+    fd = open(("/sys/class/net/" + name + "/mtu").c_str(),
+              O_RDONLY | O_NONBLOCK);
+
+    if (fd < 0) {
+        what << "--- Unable to open MTU file for '";
+        what << name << "' network interface." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        goto err;
+    }
+
+    // Reads MTU value
+    nread = read(fd, &buffer, size_bytes);
+    buffer[size_bytes] = '\0';
+
+    // Handles errors
+    if (nread == -1) {
+        what << "--- Unable to read MTU for '";
+        what << name << "' network interface." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        goto err;
+    }
+
+    if (close(fd) < 0) {
+        what << "--- Unable to close MTU file for '";
+        what << name << "' network interface." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        goto err;
+    }
+
+    return stoul(buffer, nullptr, 10);
+
+err:
+    // Rollback close file descriptor
+    close(fd);
+
+    throw runtime_error(what.str());
+}
+
 static string alloc_viface(string name, bool tap, struct viface_queues* queues)
 {
     int i = 0;
@@ -202,6 +251,76 @@ err:
     throw runtime_error(what.str());
 }
 
+static void hook_viface(string name, struct viface_queues* queues)
+{
+    int i = 0;
+    int fd = -1;
+    ostringstream what;
+
+    // Creates Tx/Rx sockets and allocates queues
+    for (i = 0; i < 2; i++) {
+        // Creates the socket
+        fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+
+        if (fd < 0) {
+            what << "--- Unable to create the Tx/Rx socket channel." << endl;
+            what << "    Name: " << name << " Queue: " << i << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            goto err;
+        }
+
+        struct ifreq ifr;
+        memset(&ifr, 0, sizeof(ifr));
+
+        (void) strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
+
+        // Obtains the network index number
+        if (ioctl(fd, SIOCGIFINDEX, &ifr) != 0) {
+            what << "--- Unable to get network index number.";
+            what << "    Name: " << name << " Queue: " << i << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            goto err;
+        }
+
+        struct sockaddr_ll socket_addr;
+        memset(&socket_addr, 0, sizeof(struct sockaddr_ll));
+
+        socket_addr.sll_family = AF_PACKET;
+        socket_addr.sll_protocol = htons(ETH_P_ALL);
+        socket_addr.sll_ifindex = ifr.ifr_ifindex;
+
+        // Binds the socket to the 'socket_addr' address
+        if (bind(fd, (struct sockaddr*) &socket_addr,
+                 sizeof(socket_addr)) != 0) {
+            what << "--- Unable to bind the Tx/Rx socket channel to the '";
+            what << name << "' network interface." << endl;
+            what << "    Queue: " << i << "." << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+            goto err;
+        }
+
+        ((int *)queues)[i] = fd;
+    }
+
+    return;
+
+err:
+    // Rollback close file descriptors
+    for (--i; i >= 0; i--) {
+        if (close(((int *)queues)[i]) < 0) {
+            what << "--- Unable to close a Rx/Tx socket." << endl;
+            what << "    Name: " << name << " Queue: " << i << endl;
+            what << "    Error: " << strerror(errno);
+            what << " (" << errno << ")." << endl;
+        }
+    }
+
+    throw runtime_error(what.str());
+}
+
 
 /*= Virtual Interface Implementation =========================================*/
 
@@ -214,10 +333,27 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
         throw invalid_argument("--- Virtual interface name too long.");
     }
 
-    // Create queues and assign name
+    // Create queues
     struct viface_queues queues;
     memset(&queues, 0, sizeof(struct viface_queues));
-    this->name = alloc_viface(name, tap, &queues);
+
+    /* Checks if the path name can be accessed. If so,
+     * it means that the network interface is already defined.
+     */
+    if (access(("/sys/class/net/" + name).c_str(), F_OK) == 0) {
+        hook_viface(name, &queues);
+        this->name = name;
+
+        // Read MTU value and resize buffer
+        this->mtu = read_mtu(name, sizeof(this->mtu));
+        this->pktbuff.resize(this->mtu);
+    } else {
+        this->name = alloc_viface(name, tap, &queues);
+
+        // Other defaults
+        this->mtu = 1500;
+    }
+
     this->queues = queues;
 
     // Create socket channels to the NET kernel for later ioctl
@@ -250,9 +386,6 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
         this->id = id;
     }
     this->idseq++;
-
-    // Other defaults
-    this->mtu = 1500;
 }
 
 VIfaceImpl::~VIfaceImpl()
