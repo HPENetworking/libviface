@@ -3,8 +3,8 @@ exec_prefix=@pkgconfig_exec_prefix@
 libdir=@pkgconfig_libdir@
 includedir=${prefix}/include
 
-Name: libviface
-Description: libviface C object oriented interface for managing and creating network interfaces.
+Name: libvifacecpp
+Description: C++ bindings for libviface
 Version: @pkgconfig_version@
 Libs: -L${libdir} -lviface
 Cflags: -I${includedir}
