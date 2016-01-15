@@ -3,7 +3,7 @@ include(FindPkgConfig)
 pkg_check_modules(LIBTINS "libtins")
 
 if(LIBTINS_FOUND)
-    set(EXEC_NAME "libtins")
+    set(EXEC_NAME "libtinscpp")
 
     # Allow to use libviface
     include_directories(
@@ -16,11 +16,14 @@ if(LIBTINS_FOUND)
     # Add source to the executable
     add_executable(
         ${EXEC_NAME}
-        ${EXEC_NAME}.cpp
+        libtins.cpp
     )
 
     # Link the executable to the library
-    target_link_libraries(${EXEC_NAME} ${LIBTINS_LIBRARIES} viface)
+    target_link_libraries(${EXEC_NAME} ${LIBTINS_LIBRARIES} vifacecpp)
 else()
     message(WARNING "libtins not found, not building libtins example...")
 endif()
+
+# Set dependency with the library target
+add_dependencies(${PROJECT_NAME} ${EXEC_NAME})

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 project("libvifacecpp")
 
 # The version number
-set(libviface_VERSION_STRING "1.1.0")
+set(libvifacecpp_VERSION_STRING "1.1.0")
 
 # Setup project variables
 set(VIFACE_TESTS ON CACHE BOOL "Enable compilation of unit tests.")
@@ -31,9 +31,9 @@ endif(VIFACE_FORCE_32BITS)
 set(pkgconfig_prefix ${CMAKE_INSTALL_PREFIX})
 set(pkgconfig_exec_prefix ${CMAKE_INSTALL_PREFIX})
 set(pkgconfig_libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
-set(pkgconfig_version ${libviface_VERSION_STRING})
+set(pkgconfig_version ${libvifacecpp_VERSION_STRING})
 configure_file(
-    "${libviface_SOURCE_DIR}/libvifacecpp.pc.in"
+    "${libvifacecpp_SOURCE_DIR}/libvifacecpp.pc.in"
     "${CMAKE_BINARY_DIR}/libvifacecpp.pc"
     @ONLY
 )
@@ -46,30 +46,37 @@ install(
 
 # Configure library
 configure_file(
-    "${libviface_SOURCE_DIR}/include/viface/config.hpp.in"
+    "${libvifacecpp_SOURCE_DIR}/include/viface/config.hpp.in"
     "${CMAKE_BINARY_DIR}/include/viface/config.hpp"
     @ONLY
 )
 
+# Creates custom target to build library
+add_custom_target(
+	${PROJECT_NAME}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        COMMENT "Building ${PROJECT_NAME} library..." VERBATIM
+)
+
 # Specify include directory
-include_directories("${libviface_SOURCE_DIR}/include/")
+include_directories("${libvifacecpp_SOURCE_DIR}/include/")
 include_directories("${CMAKE_BINARY_DIR}/include/")
 
 # Specify source directory
-add_subdirectory("${libviface_SOURCE_DIR}/src/")
+add_subdirectory("${libvifacecpp_SOURCE_DIR}/src/")
 if(VIFACE_TESTS)
-    message(STATUS "Including libviface test suite...")
-    add_subdirectory("${libviface_SOURCE_DIR}/test/")
+    message(STATUS "Including libvifacecpp test suite...")
+    add_subdirectory("${libvifacecpp_SOURCE_DIR}/test/")
 endif(VIFACE_TESTS)
 if(VIFACE_EXAMPLES)
-    message(STATUS "Including libviface examples...")
-    add_subdirectory("${libviface_SOURCE_DIR}/examples/")
+    message(STATUS "Including libvifacecpp examples...")
+    add_subdirectory("${libvifacecpp_SOURCE_DIR}/examples/")
 endif(VIFACE_EXAMPLES)
 
 # Specify public interface install directory
 install(
     FILES
-    "${libviface_SOURCE_DIR}/include/viface/viface.hpp"
+    "${libvifacecpp_SOURCE_DIR}/include/viface/viface.hpp"
     "${CMAKE_BINARY_DIR}/include/viface/config.hpp"
     DESTINATION
     "${CMAKE_INSTALL_INCLUDEDIR}/viface"
@@ -79,14 +86,14 @@ install(
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
     configure_file(
-        "${libviface_SOURCE_DIR}/doc/doxygen.conf.in"
-        "${CMAKE_BINARY_DIR}/doxygen.conf"
+        "${libvifacecpp_SOURCE_DIR}/doc/doxygen.conf.in"
+        "${CMAKE_BINARY_DIR}/bindings/cpp/doxygen.conf"
         @ONLY
     )
     add_custom_target(
-        doc
+        doccpp
         "${DOXYGEN_EXECUTABLE}"
-        "${CMAKE_BINARY_DIR}/doxygen.conf"
+        "${CMAKE_BINARY_DIR}/bindings/cpp/doxygen.conf"
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
         COMMENT "Generating API Reference documentation..." VERBATIM
     )

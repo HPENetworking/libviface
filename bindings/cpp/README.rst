@@ -1,45 +1,23 @@
 ==================================================================
-libviface : libviface C object oriented interface for managing and creating network interfaces.
+libvifacecpp : C++ bindings for Linux tun/tap and netdevice interface
 ==================================================================
 
-``libviface`` is a small C library that allows to create and configure
+``libvifacecpp`` is a small C++11 library that allows to create and configure
 virtual network interfaces in Linux based Operating Systems.
 
 ::
 
-   #include "viface/viface.h"
+   #include "viface/viface.hpp"
 
-    // Creates viface struct
-    struct viface *self;
+   // Create interface
+   viface::VIface iface("viface%d");
 
-    // Interface configuration data
-    char *name = "viface0";
-    char *ip = "192.168.25.46";
-    char* mac = "ec:f1:f8:d5:47:6b";
-    int id = 1;
+   // Configure interface
+   iface.setMAC("66:23:2d:28:c6:84");
+   iface.setIPv4("192.168.20.21");
 
-    apr_initialize();
-
-    // Creates parent pool
-    apr_pool_t *parent_pool;
-    apr_pool_create(&parent_pool, NULL);
-
-    // Creates interface
-    if ((viface_create(&parent_pool, &self) == EXIT_FAILURE) ||
-        (vifaceImpl(&self, name, true, id) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
-    }
-
-    // Configures interface
-    if ((setIPv4(&self, ip) == EXIT_FAILURE) ||
-        (setMAC(&self, mac) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
-    }
- 
-   // Brings-up interface
-   if (up(&self) == EXIT_FAILURE) {
-	return EXIT_FAILURE;
-    }
+   // Bring-up interface
+   iface.up();
 
 Then you can ``send()``, ``receive()`` or setup a ``dispath()`` callback to
 handle virtual interfaces incoming and outgoing packets. Also, interface
@@ -56,6 +34,7 @@ Features
 - Multiple strategies for packet reception and emission.
 - Interface configuration API (MAC, Ipv4, IPv6, MTU).
 - Interface statistics reading and clearing.
+- Easily integrated with ``libtins``.
 
 
 Dependencies
@@ -75,7 +54,7 @@ Build
    cd build
    cmake ..
    make
-   make doc
+   make doccpp
 
 
 Improvements
