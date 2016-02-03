@@ -74,28 +74,31 @@ struct viface_queues
 
 struct viface
 {
-    APR_RING_ENTRY(viface) link;
     struct viface_queues queues;
     int kernel_socket;
     int kernel_socket_ipv6;
     uint id;
-    uint idseq;
     uint mtu;
-    uint8_t *pktbuff;
+    uint8_t* pktbuff;
     char broadcast[INET_ADDRSTRLEN];
     char ipv4[INET_ADDRSTRLEN];
     char name[IFNAMSIZ];
     char netmask[INET_ADDRSTRLEN];
     char mac[18];
-    apr_hash_t *ipv6s;
-    apr_hash_t *stats_cache;
-    apr_hash_t *stats_keys_cache;
-    apr_pool_t *viface_pool;
+    char** ipv6s;
+    apr_hash_t* stats_cache;
+    apr_hash_t* stats_keys_cache;
+    apr_pool_t* viface_pool;
 };
 
-// Ring container type
-typedef struct _my_ring_t my_ring_t;
-APR_RING_HEAD(_my_ring_t, viface);
+// Vifaces sequencial identifier number
+static uint ID_SEQ = 0;
+
+// APR parent pool
+static apr_pool_t* PARENT_POOL = NULL;
+
+// APR temporal pool
+static apr_pool_t* TEMPORAL_POOL = NULL;
 
 /**
  * Dispatch callback type to handle packet reception.
@@ -109,8 +112,8 @@ APR_RING_HEAD(_my_ring_t, viface);
  *
  * @return status indicating if an error happened or not.
  */
-typedef int (*dispatcher_cb)(struct viface **self, char *name, uint id,
-                             uint8_t **packet, bool *result);
+typedef int (*dispatcher_cb)(struct viface* self, char* name, uint id,
+                             uint8_t* packet, bool* result);
 
 /*= Utilities ================================================================*/
 
@@ -123,7 +126,7 @@ typedef int (*dispatcher_cb)(struct viface **self, char *name, uint id,
  *
  * @return status indicating if an error happened or not.
  */
-int  parse_mac(struct viface **self, char *mac, uint8_t **result);
+int  viface_parse_mac(struct viface* self, char* mac, uint8_t** result);
 
 /**
  * Build a hexdump representation of a binary blob.
@@ -135,7 +138,7 @@ int  parse_mac(struct viface **self, char *mac, uint8_t **result);
  *
  * @return status indicating if an error happened or not.
  */
-int hexdump(struct viface **self, uint8_t *bytes, char **result);
+int viface_hex_dump(struct viface* self, uint8_t* bytes, char** result);
 
 /**
  * Calculate the 32 bit CRC of the given binary blob.
@@ -146,31 +149,56 @@ int hexdump(struct viface **self, uint8_t *bytes, char **result);
  *
  * @return status indicating if an error happened or not.
  */
-int crc32(uint8_t *bytes, uint32_t *result);
+int viface_crc_32(uint8_t* bytes, uint32_t* result);
 
 /*= Virtual Interface Implementation =========================================*/
 
 /**
- * Create a VIface struct and an APR subpool from a parent pool.
+ * Create an APR parent pool for memory allocation.
  *
- * @param[in]  APR parent pool
+ * @return status indicating if an error happened or not.
+ */
+int viface_create_global_pool();
+
+/**
+ * Create a viface struct and an APR subpool from a parent pool.
+ *
+ * @param[in]  name Name of the virtual interface. The placeholder %d
+ *             can be used and a number will be assigned to it.
+ * @param[in]  tap Tap device (default, true) or Tun device (false).
+ * @param[in]  id Optional numeric id. If given id < 0 a sequential
+ *             number will be given.
  * @param[out] viface struct created
  *
  * @return status indicating if an error happened or not.
  */
-int viface_create(apr_pool_t **parent_pool, struct viface **result);
+int viface_create_viface(char* name, bool tap, int id, struct viface** result);
 
 /**
- * Destroy a VIface struct and free all allocated memory from the APR subpool
+ * Destroy the static global APR parent pool.
+ *
+ * @return status indicating if an error happened or not.
+ */
+int viface_destroy_global_pool();
+
+/**
+ * Destroy the static temporal APR pool.
+ *
+ * @return status indicating if an error happened or not.
+ */
+int viface_destroy_temporal_pool();
+
+/**
+ * Destroy a viface struct and free all allocated memory from the APR subpool
  *
  * @param[in]  viface struct containing its state.
  *
  * @return status indicating if an error happened or not.
  */
-int viface_destroy(struct viface **self);
+int viface_destroy_viface(struct viface** self);
 
 /**
- * Create a VIface object with given name.
+ * Create a viface object with given name.
  *
  * @param[in]  viface struct containing its state.
  * @param[in]  name Name of the virtual interface. The placeholder %d
@@ -181,7 +209,8 @@ int viface_destroy(struct viface **self);
  *
  * @return status indicating if an error happened or not.
  */
-int vifaceImpl(struct viface **self, char *name, bool tap, int id);
+int viface_initialization_viface(struct viface* self, char* name, bool tap,
+                                 int id);
 
 /**
  * Getter method for virtual interface associated name.
@@ -191,7 +220,7 @@ int vifaceImpl(struct viface **self, char *name, bool tap, int id);
  *
  * @return status indicating if an error happened or not.
  */
-int getName(struct viface **self, char **result);
+int viface_get_name(struct viface* self, char** result);
 
 /**
  * Getter method for virtual interface associated numeric id.
@@ -201,7 +230,29 @@ int getName(struct viface **self, char **result);
  *
  * @return status indicating if an error happened or not.
  */
-int getID(struct viface **self, uint *result);
+int viface_get_id(struct viface* self, uint* result);
+
+/**
+ * Getter method for virtual interface associated
+ * transmission file descriptor.
+ *
+ * @param[in]  viface struct containing its state.
+ * @param[out] transmission file descriptor number.
+ *
+ * @return status indicating if an error happened or not.
+ */
+int viface_get_tx(struct viface* self, int* result);
+
+/**
+ * Getter method for virtual interface associated
+ * reception file descriptor.
+ *
+ * @param[in]  viface struct containing its state.
+ * @param[out] reception file descriptor number.
+ *
+ * @return status indicating if an error happened or not.
+ */
+int viface_get_rx(struct viface* self, int* result);
 
 /**
  * Set the MAC address of the virtual interface.
@@ -217,7 +268,7 @@ int getID(struct viface **self, uint *result);
  *
  * @return status indicating if an error happened or not.
  */
-int setMAC(struct viface **self, char *mac);
+int viface_set_mac(struct viface* self, char* mac);
 
 /**
  * Getter method for virtual interface associated MAC Address.
@@ -228,7 +279,7 @@ int setMAC(struct viface **self, char *mac);
  *
  * @return status indicating if an error happened or not.
  */
-int getMAC(struct viface **self, char **result);
+int viface_get_mac(struct viface* self, char** result);
 
 /**
  * Auxiliar method to get IPv4 Address, Netmask and Broadcast
@@ -237,12 +288,13 @@ int getMAC(struct viface **self, char **result);
  * @param[in]  viface struct containing its state.
  * @param[in]  code indicating which IPv4 value to read
  *             (Address, Netmask, Broadcast)
- * @param[otu] current IPv4 address, netmask or broadcast of the virtual
+ * @param[out] current IPv4 address, netmask or broadcast of the virtual
  *             interface depending on the request value.
  *             An empty string means no associated IPv4 address.
  * @return status indicating if an error happened or not.
  */
-int ioctlGetIPv4(struct viface **self, unsigned long request, char **result);
+int viface_ioctl_get_ipv4(struct viface* self, unsigned long request,
+                          char** result);
 
 /**
  * Set the IPv4 address of the virtual interface.
@@ -256,7 +308,7 @@ int ioctlGetIPv4(struct viface **self, unsigned long request, char **result);
  *
  * @return status indicating if an error happened or not.
  */
-int setIPv4(struct viface **self, char *ipv4);
+int viface_set_ipv4(struct viface* self, char* ipv4);
 
 /**
  * Getter method for virtual interface associated IPv4 Address.
@@ -267,7 +319,7 @@ int setIPv4(struct viface **self, char *ipv4);
  *
  * @return status indicating if an error happened or not.
  */
-int getIPv4(struct viface **self, char **result);
+int viface_get_ipv4(struct viface* self, char** result);
 
 /**
  * Set the IPv4 netmask of the virtual interface.
@@ -281,7 +333,7 @@ int getIPv4(struct viface **self, char **result);
  *
  * @return status indicating if an error happened or not.
  */
-int setIPv4Netmask(struct viface **self, char *netmask);
+int viface_set_ipv4_netmask(struct viface* self, char* netmask);
 
 /**
  * Getter method for virtual interface associated IPv4 netmask.
@@ -292,7 +344,7 @@ int setIPv4Netmask(struct viface **self, char *netmask);
  *
  * @return status indicating if an error happened or not.
  */
-int getIPv4Netmask(struct viface **self, char **result);
+int viface_get_ipv4_netmask(struct viface* self, char** result);
 
 /**
  * Set the IPv4 broadcast address of the virtual interface.
@@ -307,7 +359,7 @@ int getIPv4Netmask(struct viface **self, char **result);
  *
  * @return status indicating if an error happened or not.
  */
-int setIPv4Broadcast(struct viface **self, char *broadcast);
+int viface_set_ipv4_broadcast(struct viface* self, char* broadcast);
 
 /**
  * Getter method for virtual interface associated IPv4 broadcast
@@ -319,7 +371,7 @@ int setIPv4Broadcast(struct viface **self, char *broadcast);
  *
  * @return status indicating if an error happened or not.
  */
-int getIPv4Broadcast(struct viface **self, char **result);
+int viface_get_ipv4_broadcast(struct viface* self, char** result);
 
 /**
  * Set the IPv6 addresses of the virtual interface.
@@ -328,12 +380,13 @@ int getIPv4Broadcast(struct viface **self, char **result);
  * up() is called that the library will try to attempt to write them.
  *
  * @param[in]  viface struct containing its state.
+ * @param[in]  number of IPv6s to set
  * @param[in]  ipv6s New IPv6 addresses for this virtual interface in
  *             the form "::FFFF:204.152.189.116".
  *
  * @return status indicating if an error happened or not.
  */
-int setIPv6(struct viface **self, apr_hash_t *ipv6s);
+int viface_set_ipv6(struct viface* self, int num_ipv6s, char* ipv6s[]);
 
 /**
  * Getter method for virtual interface associated IPv6 Addresses
@@ -345,7 +398,7 @@ int setIPv6(struct viface **self, apr_hash_t *ipv6s);
  *
  * @return status indicating if an error happened or not.
  */
-int getIPv6(struct viface **self, apr_hash_t **result);
+int viface_get_ipv6(struct viface* self, char** result[]);
 
 /**
  * Set the MTU of the virtual interface.
@@ -358,7 +411,7 @@ int getIPv6(struct viface **self, apr_hash_t **result);
  *
  * @return status indicating if an error happened or not.
  */
-int setMTU(struct viface **self, uint mtu);
+int viface_set_mtu(struct viface* self, uint mtu);
 
 /**
  * Getter method for virtual interface associated maximum transmission
@@ -372,7 +425,7 @@ int setMTU(struct viface **self, uint mtu);
  *
  * @return status indicating if an error happened or not.
  */
-int getMTU(struct viface **self, uint *mtu);
+int viface_get_mtu(struct viface* self, uint* mtu);
 
 /**
  * Bring up the virtual interface.
@@ -383,7 +436,7 @@ int getMTU(struct viface **self, uint *mtu);
  *
  * @return status indicating if an error happened or not.
  */
-int up(struct viface **self);
+int viface_up(struct viface* self);
 
 /**
  * Bring down the virtual interface.
@@ -393,7 +446,7 @@ int up(struct viface **self);
  *
  * @return status indicating if an error happened or not.
  */
-int down(struct viface **self);
+int viface_down(struct viface* self);
 
 /**
  * Indicate if the virtual interface is up.
@@ -404,7 +457,7 @@ int down(struct viface **self);
  *
  * @return status indicating if an error happened or not.
  */
-int isUp(struct viface **self, bool *result);
+int viface_is_up(struct viface* self, bool* result);
 
 /**
  * Receive a packet from the virtual interface.
@@ -420,7 +473,7 @@ int isUp(struct viface **self, bool *result);
  *
  * @return status indicating if an error happened or not.
  */
-int receive(struct viface **self, uint8_t **result);
+int viface_receive(struct viface* self, uint8_t** result);
 
 /**
  * Send a packet to this virtual interface.
@@ -436,7 +489,7 @@ int receive(struct viface **self, uint8_t **result);
  *
  * @return status indicating if an error happened or not.
  */
-int send_packet(struct viface **self, uint8_t *packet);
+int viface_send(struct viface* self, uint8_t* packet);
 
 /**
  * List available statistics for this interface.
@@ -448,7 +501,7 @@ int send_packet(struct viface **self, uint8_t *packet);
  *
  * @return status indicating if an error happened or not.
  */
-int listStats(struct viface **self, apr_hash_t **result);
+int viface_list_stats(struct viface* self, char** result[]);
 
 /**
  * Read given statistic for this interface.
@@ -459,7 +512,7 @@ int listStats(struct viface **self, apr_hash_t **result);
  *
  * @return status indicating if an error happened or not.
  */
-int readStatFile(struct viface **self, char *stat, uint64_t *result);
+int viface_read_stat_file(struct viface* self, char* stat, uint64_t* result);
 
 /**
  * Read given statistic for this interface.
@@ -470,7 +523,7 @@ int readStatFile(struct viface **self, char *stat, uint64_t *result);
  *
  * @return status indicating if an error happened or not.
  */
-int readStat(struct viface **self, char *stat, uint64_t *result);
+int viface_read_stat(struct viface* self, char* stat, uint64_t* result);
 
 /**
  * Clear given statistic for this interface.
@@ -486,7 +539,7 @@ int readStat(struct viface **self, char *stat, uint64_t *result);
  *
  * @return status indicating if an error happened or not.
  */
-int clearStat(struct viface **self, char *stat);
+int viface_clear_stat(struct viface* self, char* stat);
 
 #ifdef __cplusplus
 }

@@ -34,41 +34,28 @@ static uint8_t packet[94] = {
 
 int count = 0;
 
-// Creates a network interface
-int createsInterface(struct viface **self, apr_pool_t **pool,
-                     char *viface_name, int id)
-{
-    // Creates interface
-    if ((viface_create(&*pool, &*self) == EXIT_FAILURE) ||
-        (vifaceImpl(&*self, viface_name, true, id) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
-}
-
 // Prints received packet information
-int printPacket(struct viface **self, uint8_t **packet)
+int print_packet(struct viface* self, uint8_t* packet)
 {
     uint32_t crc_32 = 0;
     char *hex_dump;
 
-    if ((crc32(*packet, &crc_32) == EXIT_FAILURE) ||
-        (hexdump(&*self, *packet, &hex_dump) == EXIT_FAILURE)) {
+    if ((viface_crc_32(packet, &crc_32) == EXIT_FAILURE) ||
+        (viface_hex_dump(self, packet, &hex_dump) == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
 
     printf("+++ Received packet %d from interface", count);
-    printf(" %s (%d) of size", (*self)->name, (*self)->id);
-    printf(" %d and CRC of 0x%x\n%s\n", *packet[0], crc_32, hex_dump);
+    printf(" %s (%d) of size", self->name, self->id);
+    printf(" %d and CRC of 0x%x\n%s\n", packet[0], crc_32, hex_dump);
     return EXIT_SUCCESS;
 }
 
 // Dispatch callback type to handle packet reception.
-int handler(struct viface **self, char *name, uint id, uint8_t **packet,
-            bool *result)
+int handler(struct viface* self, char* name, uint id, uint8_t* packet,
+            bool* result)
 {
-    if (printPacket(&*self, &*packet) == EXIT_FAILURE) {
+    if (print_packet(self, packet) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
     count++;
@@ -87,26 +74,22 @@ int handler(struct viface **self, char *name, uint id, uint8_t **packet,
  */
 main(int argc, const char* argv[])
 {
-    struct viface *iface0;
-    struct viface *iface1;
+    struct viface* iface0;
+    struct viface* iface1;
     dispatcher_cb callback;
-    my_ring_t *ring;
 
-    char *name_iface0 = "viface0";
-    char *name_iface1 = "viface1";
+    char* name_iface0 = "viface0";
+    char* name_iface1 = "viface1";
 
     printf("\n--- Starting dispatch example...\n\n");
 
-    apr_initialize();
-
-    // Creates parent pool
-    apr_pool_t *pool;
-    apr_pool_create(&pool, NULL);
-
-    if ((createsInterface(&iface0, &pool, name_iface0, 0) == EXIT_FAILURE) ||
-        (up(&iface0) == EXIT_FAILURE) ||
-        (createsInterface(&iface1, &pool, name_iface1, 1) == EXIT_FAILURE) ||
-        (up(&iface1) == EXIT_FAILURE)) {
+    if ((viface_create_global_pool() == EXIT_FAILURE) ||
+        (viface_create_viface(name_iface0, true, 0,
+                              &iface0) == EXIT_FAILURE) ||
+        (viface_up(iface0) == EXIT_FAILURE) ||
+        (viface_create_viface(name_iface1, true, 1,
+                              &iface1) == EXIT_FAILURE) ||
+        (viface_up(iface1) == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
 
@@ -116,22 +99,23 @@ main(int argc, const char* argv[])
     printf("--- Press Any Key to Receive Packet.\n");
     getchar();
 
-    // Intializes the ring container
-    ring = apr_palloc(pool, sizeof(my_ring_t));
-    APR_RING_INIT(ring, viface, link);
+    apr_initialize();
 
-    // Inserts vifaces to the ring
-    APR_RING_INSERT_TAIL(ring, iface0, viface, link);
-    APR_RING_INSERT_TAIL(ring, iface1, viface, link);
+    // Creates array of viface structs
+    struct viface* ifaces[2] = {iface0, iface1};
+    int num_ifaces = sizeof(ifaces) / sizeof(struct viface*);
 
     printf("--- Calling dispatch ...\n");
     callback = handler;
-    if (dispatch(&iface0, ring, callback, -1) == EXIT_FAILURE) {
+    if ((viface_dispatch(iface0, num_ifaces, ifaces,
+                         callback, -1) == EXIT_FAILURE) ||
+        (viface_down(iface0) == EXIT_FAILURE) ||
+        (viface_down(iface1) == EXIT_FAILURE) ||
+        (viface_destroy_viface(&iface0) == EXIT_FAILURE) ||
+        (viface_destroy_viface(&iface1) == EXIT_FAILURE) ||
+        (viface_destroy_global_pool() == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
-
-    apr_pool_destroy(pool);
-    apr_terminate();
 
     return 0;
 }

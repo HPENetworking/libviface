@@ -34,35 +34,18 @@ static uint8_t packet[94] = {
 
 int count = 0;
 
-// Creates a network interface
-int createsInterface(struct viface **self, apr_pool_t **parent_pool,
-                     char *viface_name, int id)
-{
-    // Creates interface
-    if ((viface_create(&*parent_pool, &*self) == EXIT_FAILURE) ||
-        (vifaceImpl(&*self, viface_name, true, id) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
-}
-
 // Prints the network interface statistics values
-int printStatistics(struct viface **self, apr_hash_t *hash_stats)
+int print_statistics(struct viface* self, char** stats_names)
 {
-    apr_hash_index_t *hash_index = NULL;
-    apr_pool_t *pool_stats = NULL;
-    char *name_stats;
+    int i = 0;
 
-
-    for (hash_index = apr_hash_first(pool_stats, hash_stats); hash_index;
-         hash_index = apr_hash_next(hash_index)) {
-        apr_hash_this(hash_index, NULL, NULL, (void*) &name_stats);
-        uint64_t resultKey;
-        if (readStat(&*self, name_stats, &resultKey) == EXIT_FAILURE) {
+    for (i = 0; i < 23; i++) {
+        uint64_t result_key;
+        if (viface_read_stat(self, stats_names[i],
+                             &result_key) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
-        printf("     %s : %zu\n", name_stats, resultKey);
+        printf("     %s : %zu\n", stats_names[i], result_key);
     }
     printf("\n");
     return EXIT_SUCCESS;
@@ -71,26 +54,23 @@ int printStatistics(struct viface **self, apr_hash_t *hash_stats)
 /* Shows the use of the interface statistics to read
  * the number of packets and bytes sent.
  */
-int checkStatistics(struct viface **self)
+int check_statistics(struct viface* self)
 {
     int i = 0;
     int number_packets = 100;
     uint32_t crc_32 = 0;
     char *hex_dump;
-    char *statistic;
-    apr_pool_t *pool = NULL;
-    apr_hash_index_t *index = NULL;
-    apr_hash_t *hash_stats;
+    char** stats_names;
 
     printf("********** Viface Statistics **********\n\n");
 
     // Prints statistics before sending packets
     printf("--- Statistics before sending packets:\n");
 
-    if ((listStats(&*self, &hash_stats) == EXIT_FAILURE) ||
-        (printStatistics(&*self, hash_stats) == EXIT_FAILURE) ||
-        (crc32(packet, &crc_32) == EXIT_FAILURE) ||
-        (hexdump(&*self, packet, &hex_dump) == EXIT_FAILURE)) {
+    if ((viface_list_stats(&*self, &stats_names) == EXIT_FAILURE) ||
+        (print_statistics(&*self, stats_names) == EXIT_FAILURE) ||
+        (viface_crc_32(packet, &crc_32) == EXIT_FAILURE) ||
+        (viface_hex_dump(&*self, packet, &hex_dump) == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
 
@@ -107,7 +87,7 @@ int checkStatistics(struct viface **self)
             printf("\n");
         }
         printf(" #%.2d ...", i + 1);
-        if (send_packet(&*self, packet) == EXIT_FAILURE) {
+        if (viface_send(self, packet) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
     }
@@ -115,23 +95,22 @@ int checkStatistics(struct viface **self)
 
     // Prints statistics after sending packets
     printf("--- Statistics after sending packets:\n");
-    if (printStatistics(&*self, hash_stats) == EXIT_FAILURE) {
+    if (print_statistics(self, stats_names) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
     // Clears statistics
     printf("--- Clearing statistics:\n");
 
-    for (index = apr_hash_first(pool, hash_stats); index;
-         index = apr_hash_next(index)) {
-        uint64_t resultKey;
+    for (i = 0; i < 23; i++) {
+        uint64_t result_key;
 
-        apr_hash_this(index, NULL, NULL, (void*) &statistic);
-        if ((clearStat(&*self, statistic) == EXIT_FAILURE) ||
-            (readStat(&*self, statistic, &resultKey) == EXIT_FAILURE)) {
+        if ((viface_clear_stat(self, stats_names[i]) == EXIT_FAILURE) ||
+            (viface_read_stat(self, stats_names[i],
+                              &result_key) == EXIT_FAILURE)) {
             return EXIT_FAILURE;
         }
-        printf("     %s : %zu\n", statistic, resultKey);
+        printf("     %s : %zu\n", stats_names[i], result_key);
     }
     printf("\n");
     return EXIT_SUCCESS;
@@ -143,7 +122,7 @@ int checkStatistics(struct viface **self)
  */
 main(int argc, const char* argv[])
 {
-    struct viface *self;
+    struct viface* self;
     char name[IFNAMSIZ] = "viface0";
     int id = 1;
 
@@ -153,28 +132,21 @@ main(int argc, const char* argv[])
         strcpy(name, argv[1]);
     }
 
-    apr_initialize();
-
-    // Creates parent pool
-    apr_pool_t *parent_pool;
-    apr_pool_create(&parent_pool, NULL);
-
     /* These IF statements do the following:
      * 1) Creates interface
      * 2) Brings-up interface
      * 3) Checks interface statistics
      * 4) Brings-down interface
      */
-    if ((createsInterface(&self, &parent_pool, name, 0) == EXIT_FAILURE) ||
-        (up(&self) == EXIT_FAILURE) ||
-        (checkStatistics(&self) == EXIT_FAILURE) ||
-        (down(&self) == EXIT_FAILURE) ||
-        (viface_destroy(&self) == EXIT_FAILURE)) {
+    if ((viface_create_global_pool() == EXIT_FAILURE) ||
+        (viface_create_viface(name, true, 0, &self) == EXIT_FAILURE) ||
+        (viface_up(self) == EXIT_FAILURE) ||
+        (check_statistics(self) == EXIT_FAILURE) ||
+        (viface_down(self) == EXIT_FAILURE) ||
+        (viface_destroy_viface(&self) == EXIT_FAILURE) ||
+        (viface_destroy_global_pool() == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
-
-    apr_pool_destroy(parent_pool);
-    apr_terminate();
 
     return 0;
 }

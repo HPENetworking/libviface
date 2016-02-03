@@ -19,7 +19,7 @@
 
 /*= Utilities ================================================================*/
 
-int  parse_mac(struct viface **self, char *mac, uint8_t **result)
+int  viface_parse_mac(struct viface* self, char* mac, uint8_t** result)
 {
     unsigned int bytes[6];
     int scans = sscanf(
@@ -34,7 +34,7 @@ int  parse_mac(struct viface **self, char *mac, uint8_t **result)
     }
 
     int i = 0;
-    uint8_t *parsed = (uint8_t*)apr_pcalloc((*self)->viface_pool, 6);
+    uint8_t *parsed = apr_pcalloc(TEMPORAL_POOL, 6);
 
     if (parsed == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for");
@@ -52,18 +52,17 @@ int  parse_mac(struct viface **self, char *mac, uint8_t **result)
     return EXIT_SUCCESS;
 }
 
-int hexdump(struct viface **self, uint8_t *bytes, char **result)
+int viface_hex_dump(struct viface* self, uint8_t* bytes, char** result)
 {
     const int BYTES_PER_LINE = 72;
 
     char buffer[10];
     int number_lines = (bytes[0] / 16) + 1;
 
-    *result =
-        (char*)apr_pcalloc((*self)->viface_pool, BYTES_PER_LINE * number_lines);
+    *result = apr_pcalloc(TEMPORAL_POOL, BYTES_PER_LINE * number_lines);
     if (result == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for");
-        fprintf(stdout, " result buffer at 'hexdump' method.\n");
+        fprintf(stdout, " result buffer at 'viface_hex_dump' method.\n");
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -107,7 +106,7 @@ int hexdump(struct viface **self, uint8_t *bytes, char **result)
     return EXIT_SUCCESS;
 }
 
-int crc32(uint8_t *bytes, uint32_t *result)
+int viface_crc_32(uint8_t* bytes, uint32_t* result)
 {
     static uint32_t crc_table[] = {
         0x4DBDF21C, 0x500AE278, 0x76D3D2D4, 0x6B64C2B0,
@@ -130,16 +129,16 @@ int crc32(uint8_t *bytes, uint32_t *result)
 
 /*= Helpers ==================================================================*/
 
-static int read_flags(int sockfd, char *name, struct ifreq *ifr)
+static int viface_read_flags(int sock_fd, char* name, struct ifreq* ifr)
 {
     // Prepare communication structure
     memset(ifr, 0, sizeof(struct ifreq));
 
     // Set interface name
-    (void) strncpy(ifr->ifr_name, name, IFNAMSIZ - 1);
+    apr_cpystrn(ifr->ifr_name, name, IFNAMSIZ - 1);
 
     // Read interface flags
-    if (ioctl(sockfd, SIOCGIFFLAGS, ifr) != 0) {
+    if (ioctl(sock_fd, SIOCGIFFLAGS, ifr) != 0) {
         fprintf(stdout, "--- Unable to read %s flags.\n", name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
@@ -149,7 +148,7 @@ static int read_flags(int sockfd, char *name, struct ifreq *ifr)
 }
 
 
-static int read_mtu(char *name, size_t size_bytes, uint *result)
+static int viface_read_mtu(char* name, size_t size_bytes, uint* result)
 {
     const int SIZE_BYTES_PATH = 19;
 
@@ -208,8 +207,8 @@ err:
     return EXIT_FAILURE;
 }
 
-static int alloc_viface(struct viface **self, char* name, bool tap,
-                        struct viface_queues *queues, char **result)
+static int viface_alloc_viface(struct viface* self, char* name, bool tap,
+                               struct viface_queues* queues, char* result)
 {
     int i = 0;
     int fd = -1;
@@ -231,7 +230,7 @@ static int alloc_viface(struct viface **self, char* name, bool tap,
         ifr.ifr_flags |= IFF_TUN;
     }
 
-    (void) strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
+    apr_cpystrn(ifr.ifr_name, name, IFNAMSIZ - 1);
 
     // Allocate queues
     for (i = 0; i < 2; i++) {
@@ -246,7 +245,7 @@ static int alloc_viface(struct viface **self, char* name, bool tap,
         }
 
         // Register a network device with the kernel
-        if (ioctl(fd, TUNSETIFF, (void *)&ifr) != 0) {
+        if (ioctl(fd, TUNSETIFF, (void* )&ifr) != 0) {
             fprintf(stdout, "--- Unable to register a TUN/TAP device.\n");
             fprintf(stdout, "    Name: %s Queue: %d.\n", name, i);
             fprintf(stdout, "    Error: %s", strerror(errno));
@@ -263,26 +262,16 @@ static int alloc_viface(struct viface **self, char* name, bool tap,
             goto err;
         }
 
-        ((int *)queues)[i] = fd;
+        ((int* )queues)[i] = fd;
     }
 
-    *result =
-        (char*)apr_pcalloc((*self)->viface_pool, strlen(ifr.ifr_name) + 1);
-    if (result == NULL) {
-        fprintf(stdout, "--- Memory could not be allocated for");
-        fprintf(stdout, " viface name in alloc_viface method.\n");
-        fprintf(stdout, "    Error: %s", strerror(errno));
-        fprintf(stdout, " (%d).\n", errno);
-        return EXIT_FAILURE;
-    }
-
-    strcpy(*result, ifr.ifr_name);
+    apr_cpystrn(result, ifr.ifr_name, strlen(ifr.ifr_name) + 1);
     return EXIT_SUCCESS;
 
 err:
     // Rollback close file descriptors
     for (--i; i >= 0; i--) {
-        if (close(((int *)queues)[i]) < 0) {
+        if (close(((int* )queues)[i]) < 0) {
             fprintf(stdout, "--- Unable to close a TUN/TAP device.\n");
             fprintf(stdout, "    Name: %s Queue: %d.\n", name, i);
             fprintf(stdout, "    Error: %s", strerror(errno));
@@ -292,7 +281,7 @@ err:
     return EXIT_FAILURE;
 }
 
-static int hook_viface(char *name, struct viface_queues *queues)
+static int viface_hook_viface(char* name, struct viface_queues* queues)
 {
     int i = 0;
     int fd = -1;
@@ -313,7 +302,7 @@ static int hook_viface(char *name, struct viface_queues *queues)
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
 
-        (void) strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
+        apr_cpystrn(ifr.ifr_name, name, IFNAMSIZ - 1);
 
         // Obtains the network index number
         if (ioctl(fd, SIOCGIFINDEX, &ifr) != 0) {
@@ -342,14 +331,14 @@ static int hook_viface(char *name, struct viface_queues *queues)
             goto err;
         }
 
-        ((int *)queues)[i] = fd;
+        ((int* )queues)[i] = fd;
     }
     return EXIT_SUCCESS;
 
 err:
     // Rollback close file descriptors
     for (--i; i >= 0; i--) {
-        if (close(((int *)queues)[i]) < 0) {
+        if (close(((int* )queues)[i]) < 0) {
             fprintf(stdout, "--- Unable to close a Rx/Tx socket.\n");
             fprintf(stdout, "    Name: %s Queue: %d.\n", name, i);
             fprintf(stdout, "    Error: %s", strerror(errno));
@@ -359,7 +348,7 @@ err:
     return EXIT_FAILURE;
 }
 
-static int isEmpty(char *buffer, bool *result)
+static int viface_is_empty(char* buffer, bool* result)
 {
     *result = true;
 
@@ -371,54 +360,95 @@ static int isEmpty(char *buffer, bool *result)
 
 /*= Virtual Interface Implementation =========================================*/
 
-int viface_create(apr_pool_t **parent_pool, struct viface **result)
+int viface_create_global_pool()
 {
-    apr_pool_t *viface_pool = NULL;
-    apr_pool_create(&viface_pool, *parent_pool);
+    apr_initialize();
 
-    struct viface *self =
-        (struct viface*)apr_pcalloc(viface_pool, sizeof(struct viface));
+    // Creates parent and temporal pools
+    apr_pool_create(&PARENT_POOL, NULL);
+    apr_pool_create(&TEMPORAL_POOL, PARENT_POOL);
+}
+
+int viface_create_viface(char* name, bool tap, int id, struct viface** result)
+{
+    apr_pool_t* viface_pool = NULL;
+    apr_pool_create(&viface_pool, PARENT_POOL);
+
+    struct viface* self = apr_pcalloc(viface_pool, sizeof(struct viface));
 
     if (self == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for");
         fprintf(stdout, " 'viface' struct.\n");
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
+        viface_destroy_viface(&self);
         return EXIT_FAILURE;
     }
 
     self->viface_pool = viface_pool;
 
-    self->ipv6s = apr_hash_make(self->viface_pool);
     self->stats_keys_cache = apr_hash_make(self->viface_pool);
     self->stats_cache = apr_hash_make(self->viface_pool);
 
-    memset(&self->queues, 0, sizeof(struct viface_queues));
+    if ((self->stats_keys_cache == NULL) ||
+        (self->stats_cache == NULL)) {
+        fprintf(stdout, "--- Memory could not be allocated for");
+        fprintf(stdout, " APR hash table.\n");
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        viface_destroy_viface(&self);
+        return EXIT_FAILURE;
+    }
     *result = self;
 
-
-    return EXIT_SUCCESS;
-}
-
-int viface_destroy(struct viface **self)
-{
-    close((*self)->queues.rx);
-    close((*self)->queues.tx);
-    close((*self)->kernel_socket);
-    close((*self)->kernel_socket_ipv6);
-
-    if (*self != NULL) {
-        apr_pool_destroy((*self)->viface_pool);
-        //free(self);
-        *self = NULL;
+    if (viface_initialization_viface(self, name, tap, id) == EXIT_FAILURE) {
+        viface_destroy_viface(&self);
+        return EXIT_FAILURE;
     }
+
     return EXIT_SUCCESS;
 }
 
-int vifaceImpl(struct viface **self, char *name, bool tap, int id)
+int viface_destroy_global_pool()
 {
-    const int SIZE_BYTES_PATH = 15;
+    apr_pool_destroy(PARENT_POOL);
+    apr_terminate();
+    return EXIT_SUCCESS;
+}
 
+int viface_destroy_temporal_pool()
+{
+    apr_pool_destroy(TEMPORAL_POOL);
+    return EXIT_SUCCESS;
+}
+
+int viface_destroy_viface(struct viface** self)
+{
+    if (*self == NULL) {
+        fprintf(stdout, "--- Error destroying viface struct");
+        return EXIT_FAILURE;
+    }
+
+    if ((close((*self)->queues.rx)) ||
+        (close((*self)->queues.tx)) ||
+        (close((*self)->kernel_socket)) ||
+        (close((*self)->kernel_socket_ipv6))) {
+        fprintf(stdout, "--- Unable to close file descriptors for");
+        fprintf(stdout, " interface %s.\n", (*self)->name);
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
+
+    apr_pool_destroy((*self)->viface_pool);
+    *self = NULL;
+
+    return EXIT_SUCCESS;
+}
+
+int viface_initialization_viface(struct viface* self, char* name,
+                                 bool tap, int id)
+{
     // Check name length
     if (strlen(name) >= IFNAMSIZ) {
         fprintf(stdout, "--- Virtual interface name too long.\n");
@@ -429,7 +459,7 @@ int vifaceImpl(struct viface **self, char *name, bool tap, int id)
     struct viface_queues queues;
     memset(&queues, 0, sizeof(struct viface_queues));
 
-    int size_bytes_viface_path = SIZE_BYTES_PATH + strlen(name);
+    int size_bytes_viface_path = strlen("/sys/class/net/") + strlen(name);
 
     char viface_path[size_bytes_viface_path + 1];
     memset(&viface_path, 0, size_bytes_viface_path);
@@ -441,20 +471,19 @@ int vifaceImpl(struct viface **self, char *name, bool tap, int id)
      * it means that the network interface is already defined.
      */
     if (access(viface_path, F_OK) == 0) {
-        if (hook_viface(name, &queues) == EXIT_FAILURE) {
+        if (viface_hook_viface(name, &queues) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
-        strcpy((*self)->name, name);
+        apr_cpystrn(self->name, name, strlen(name) + 1);
 
         // Read MTU value and resize buffer
-        if (read_mtu(name, sizeof((*self)->mtu),
-                     &(*self)->mtu) == EXIT_FAILURE) {
+        if (viface_read_mtu(name, sizeof(self->mtu),
+                            &self->mtu) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
-        (*self)->pktbuff =
-            (uint8_t*)apr_pcalloc((*self)->viface_pool, sizeof((*self)->mtu));
+        self->pktbuff = apr_pcalloc(self->viface_pool, sizeof(self->mtu));
 
-        if ((*self)->pktbuff == NULL) {
+        if (self->pktbuff == NULL) {
             fprintf(stdout, "--- Memory could not be allocated for");
             fprintf(stdout, " pktbuff in %s interface.\n", name);
             fprintf(stdout, "    Error: %s", strerror(errno));
@@ -462,23 +491,23 @@ int vifaceImpl(struct viface **self, char *name, bool tap, int id)
             return EXIT_FAILURE;
         }
     } else {
-        char *viface_name;
-        if (alloc_viface(&*self, name, tap, &queues, &viface_name) ==
-            EXIT_FAILURE) {
+        char viface_name[IFNAMSIZ];
+        if (viface_alloc_viface(self, name, tap, &queues,
+                                viface_name) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
-        strcpy((*self)->name, viface_name);
+        apr_cpystrn(self->name, viface_name, strlen(viface_name) + 1);
 
         // Other defaults
-        (*self)->mtu = 1500;
+        self->mtu = 1500;
     }
 
-    (*self)->queues = queues;
+    self->queues = queues;
 
     // Create socket channels to the NET kernel for later ioctl
-    (*self)->kernel_socket = -1;
-    (*self)->kernel_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if ((*self)->kernel_socket < 0) {
+    self->kernel_socket = -1;
+    self->kernel_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (self->kernel_socket < 0) {
         fprintf(stdout, "--- Unable to create IPv4 socket channel to the");
         fprintf(stdout, " NET kernel.\n");
         fprintf(stdout, "    Error: %s", strerror(errno));
@@ -486,9 +515,9 @@ int vifaceImpl(struct viface **self, char *name, bool tap, int id)
         return EXIT_FAILURE;
     }
 
-    (*self)->kernel_socket_ipv6 = -1;
-    (*self)->kernel_socket_ipv6 = socket(AF_INET6, SOCK_STREAM, 0);
-    if ((*self)->kernel_socket_ipv6 < 0) {
+    self->kernel_socket_ipv6 = -1;
+    self->kernel_socket_ipv6 = socket(AF_INET6, SOCK_STREAM, 0);
+    if (self->kernel_socket_ipv6 < 0) {
         fprintf(stdout, "--- Unable to create IPv6 socket channel to the");
         fprintf(stdout, " NET kernel.\n");
         fprintf(stdout, "    Error: %s", strerror(errno));
@@ -498,77 +527,84 @@ int vifaceImpl(struct viface **self, char *name, bool tap, int id)
 
     // Set id
     if (id < 0) {
-        (*self)->id = (*self)->idseq;
+        self->id = ID_SEQ;
     } else {
-        (*self)->id = id;
+        self->id = id;
     }
 
-    (*self)->idseq++;
+    ID_SEQ++;
     return EXIT_SUCCESS;
 }
 
-int getName(struct viface **self, char **result)
+int viface_get_name(struct viface* self, char** result)
 {
-    *result = (*self)->name;
-    return EXIT_SUCCESS;
-}
-
-int getID(struct viface **self, uint *result)
-{
-    *result = (*self)->idseq;
-    return EXIT_SUCCESS;
-}
-
-int getTX(struct viface **self, int *result)
-{
-    *result = (*self)->queues.tx;
-    return EXIT_SUCCESS;
-}
-
-int getRX(struct viface **self, int *result)
-{
-    *result = (*self)->queues.rx;
-    return EXIT_SUCCESS;
-}
-
-
-int setMAC(struct viface **self, char *mac)
-{
-    uint8_t *mac_bin;
-    if (parse_mac(&*self, mac, &mac_bin) == EXIT_FAILURE) {
+    *result = apr_pcalloc(TEMPORAL_POOL, IFNAMSIZ);
+    if (result == NULL) {
+        fprintf(stdout, "--- Memory could not be allocated for");
+        fprintf(stdout, " result buffer at 'viface_get_name' method.\n");
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
-    strcpy((*self)->mac, mac);
+    *result = self->name;
     return EXIT_SUCCESS;
 }
 
-int getMAC(struct viface **self, char **result)
+int viface_get_id(struct viface* self, uint* result)
+{
+    *result = self->id;
+    return EXIT_SUCCESS;
+}
+
+int viface_get_tx(struct viface* self, int* result)
+{
+    *result = self->queues.tx;
+    return EXIT_SUCCESS;
+}
+
+int viface_get_rx(struct viface* self, int* result)
+{
+    *result = self->queues.rx;
+    return EXIT_SUCCESS;
+}
+
+
+int viface_set_mac(struct viface* self, char* mac)
+{
+    uint8_t* mac_bin;
+    if (viface_parse_mac(self, mac, &mac_bin) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
+
+    apr_cpystrn(self->mac, mac, strlen(mac) + 1);
+    return EXIT_SUCCESS;
+}
+
+int viface_get_mac(struct viface* self, char** result)
 {
     // Read interface flags
     struct ifreq ifr;
-    if (read_flags((*self)->kernel_socket, (*self)->name,
-                   &ifr) == EXIT_FAILURE) {
+    if (viface_read_flags(self->kernel_socket, self->name,
+                          &ifr) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
-    if (ioctl((*self)->kernel_socket, SIOCGIFHWADDR, &ifr) != 0) {
-        fprintf(stdout, "--- Unable to get MAC addr for %s.\n", (*self)->name);
+    if (ioctl(self->kernel_socket, SIOCGIFHWADDR, &ifr) != 0) {
+        fprintf(stdout, "--- Unable to get MAC addr for %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
-    *result = (char*)apr_pcalloc((*self)->viface_pool, 18);
+    *result = apr_pcalloc(TEMPORAL_POOL, 18);
     if (result == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for");
-        fprintf(stdout, " result buffer at 'getMAC' method.\n");
+        fprintf(stdout, " result buffer at 'viface_get_mac' method.\n");
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
-
-    memset(*result, '\0', sizeof(result));
 
     // Convert binary MAC address to string
     int i = 0;
@@ -585,32 +621,33 @@ int getMAC(struct viface **self, char **result)
     return EXIT_SUCCESS;
 }
 
-int setIPv4(struct viface **self, char *ipv4)
+int viface_set_ipv4(struct viface* self, char* ipv4)
 {
     // Validate format
     struct in_addr addr;
 
     if (!inet_pton(AF_INET, ipv4, &addr)) {
         fprintf(stdout, "--- Invalid IPv4 address (%s) for", ipv4);
-        fprintf(stdout, " %s.\n", (*self)->name);
+        fprintf(stdout, " %s.\n", self->name);
         return EXIT_FAILURE;
     }
 
-    strcpy((*self)->ipv4, ipv4);
+    apr_cpystrn(self->ipv4, ipv4, strlen(ipv4) + 1);
     return EXIT_SUCCESS;
 }
 
-int ioctlGetIPv4(struct viface **self, unsigned long request, char **result)
+int viface_ioctl_get_ipv4(struct viface* self, unsigned long request,
+                          char** result)
 {
     // Read interface flags
     struct ifreq ifr;
-    if (read_flags((*self)->kernel_socket, (*self)->name,
-                   &ifr) == EXIT_FAILURE) {
+    if (viface_read_flags(self->kernel_socket, self->name,
+                          &ifr) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
-    if (ioctl((*self)->kernel_socket, request, &ifr) != 0) {
-        fprintf(stdout, "--- Unable to get IPv4 for %s.\n", (*self)->name);
+    if (ioctl(self->kernel_socket, request, &ifr) != 0) {
+        fprintf(stdout, "--- Unable to get IPv4 for %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -622,71 +659,71 @@ int ioctlGetIPv4(struct viface **self, unsigned long request, char **result)
 
     struct sockaddr_in* ipaddr = (struct sockaddr_in*) &ifr.ifr_addr;
     if (inet_ntop(AF_INET, &(ipaddr->sin_addr), addr, sizeof(addr)) == NULL) {
-        fprintf(stdout, "--- Unable to convert IPv4 for %s.\n", (*self)->name);
+        fprintf(stdout, "--- Unable to convert IPv4 for %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
-    *result = (char*)apr_pcalloc((*self)->viface_pool, INET_ADDRSTRLEN);
+    *result = apr_pcalloc(TEMPORAL_POOL, INET_ADDRSTRLEN);
     if (result == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for");
-        fprintf(stdout, " result buffer at 'ioctlGetIPv4' method.\n");
+        fprintf(stdout, " result buffer at 'viface_ioctlGetIPv4' method.\n");
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
-    strcpy(*result, addr);
+    apr_cpystrn(*result, addr, strlen(addr) + 1);
     return EXIT_SUCCESS;
 }
 
-int getIPv4(struct viface **self, char **result)
+int viface_get_ipv4(struct viface* self, char** result)
 {
-    return ioctlGetIPv4(&*self, SIOCGIFADDR, &*result);
+    return viface_ioctl_get_ipv4(self, SIOCGIFADDR, result);
 }
 
-int setIPv4Netmask(struct viface **self, char *netmask)
+int viface_set_ipv4_netmask(struct viface* self, char* netmask)
 {
     // Validate format
     struct in_addr addr;
 
     if (!inet_pton(AF_INET, netmask, &addr)) {
         fprintf(stdout, "--- Invalid IPv4 netmask (%s) for", netmask);
-        fprintf(stdout, " %s.\n", (*self)->name);
+        fprintf(stdout, " %s.\n", self->name);
         return EXIT_FAILURE;
     }
 
-    strcpy((*self)->netmask, netmask);
+    apr_cpystrn(self->netmask, netmask, strlen(netmask) + 1);
     return EXIT_SUCCESS;
 }
 
-int getIPv4Netmask(struct viface **self, char **result)
+int viface_get_ipv4_netmask(struct viface* self, char** result)
 {
-    return ioctlGetIPv4(&*self, SIOCGIFNETMASK, &*result);
+    return viface_ioctl_get_ipv4(self, SIOCGIFNETMASK, result);
 }
 
-int setIPv4Broadcast(struct viface **self, char *broadcast)
+int viface_set_ipv4_broadcast(struct viface* self, char* broadcast)
 {
     // Validate format
     struct in_addr addr;
 
     if (!inet_pton(AF_INET, broadcast, &addr)) {
         fprintf(stdout, "--- Invalid IPv4 address (%s) for", broadcast);
-        fprintf(stdout, " %s.\n", (*self)->name);
+        fprintf(stdout, " %s.\n", self->name);
         return EXIT_FAILURE;
     }
 
-    strcpy((*self)->broadcast, broadcast);
+    apr_cpystrn(self->broadcast, broadcast, strlen(broadcast) + 1);
     return EXIT_SUCCESS;
 }
 
-int getIPv4Broadcast(struct viface **self, char **result)
+int viface_get_ipv4_broadcast(struct viface* self, char** result)
 {
-    return ioctlGetIPv4(&*self, SIOCGIFBRDADDR, &*result);
+    return viface_ioctl_get_ipv4(self, SIOCGIFBRDADDR, result);
 }
 
-int setMTU(struct viface **self, uint mtu)
+int viface_set_mtu(struct viface* self, uint mtu)
 {
     // RFC 791, p. 24: "Every internet module must be able to forward a
     // datagram of 68 octets without further fragmentation."
@@ -702,21 +739,21 @@ int setMTU(struct viface **self, uint mtu)
         return EXIT_FAILURE;
     }
 
-    (*self)->mtu = mtu;
+    self->mtu = mtu;
     return EXIT_SUCCESS;
 }
 
-int getMTU(struct viface **self, uint *mtu)
+int viface_get_mtu(struct viface* self, uint* mtu)
 {
     // Read interface flags
     struct ifreq ifr;
-    if (read_flags((*self)->kernel_socket, (*self)->name,
-                   &ifr) == EXIT_FAILURE) {
+    if (viface_read_flags(self->kernel_socket, self->name,
+                          &ifr) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
-    if (ioctl((*self)->kernel_socket, SIOCGIFMTU, &ifr) != 0) {
-        fprintf(stdout, "--- Unable to get MTU for %s.\n", (*self)->name);
+    if (ioctl(self->kernel_socket, SIOCGIFMTU, &ifr) != 0) {
+        fprintf(stdout, "--- Unable to get MTU for %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -726,35 +763,49 @@ int getMTU(struct viface **self, uint *mtu)
     return EXIT_SUCCESS;
 }
 
-int setIPv6(struct viface **self, apr_hash_t *ipv6s)
+int viface_set_ipv6(struct viface* self, int num_ipv6s, char* ipv6s[])
 {
     // Validate format
     struct in6_addr addr6;
 
-    apr_hash_index_t *index = NULL;
-    void *ipv6_hash;
-    char *ipv6;
-
-    for (index = apr_hash_first((*self)->viface_pool, ipv6s); index;
-         index = apr_hash_next(index)) {
-        apr_hash_this(index, NULL, NULL, &ipv6_hash);
-        ipv6 = (char*)ipv6_hash;
-
-        if (!inet_pton(AF_INET6, ipv6, &addr6)) {
+    int i = 0;
+    for (i = 0; i < num_ipv6s; i++) {
+        if (!inet_pton(AF_INET6, ipv6s[i], &addr6)) {
             fprintf(stdout, "--- Invalid IPv6 address");
-            fprintf(stdout, " (%s) for %s.\n", ipv6, (*self)->name);
+            fprintf(stdout, " (%s) for %s.\n", ipv6s[i], self->name);
             return EXIT_FAILURE;
         }
     }
 
-    (*self)->ipv6s = ipv6s;
+    self->ipv6s = apr_pcalloc(self->viface_pool, sizeof(char) * num_ipv6s + 1);
+
+    if (self->ipv6s == NULL) {
+        fprintf(stdout, "--- Memory could not be allocated for");
+        fprintf(stdout, " ipv6s buffer at 'viface_set_ipv6' method.\n");
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
+
+    self->ipv6s = ipv6s;
     return EXIT_SUCCESS;
 }
 
-int getIPv6(struct viface **self, apr_hash_t **result)
+int viface_get_ipv6(struct viface* self, char** result[])
 {
+    int i = 0;
+
     // Creates hash table
-    *result = apr_hash_make((*self)->viface_pool);
+    char** ipv6s =
+        apr_pcalloc(TEMPORAL_POOL, sizeof(char*) * INET6_ADDRSTRLEN);
+
+    if (ipv6s == NULL) {
+        fprintf(stdout, "--- Memory could not be allocated for");
+        fprintf(stdout, " getting IPv6s for %s interface.\n", self->name);
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
 
     // Buffer to store string representation of the address
     char buff[INET6_ADDRSTRLEN];
@@ -784,7 +835,7 @@ int getIPv6(struct viface **self, apr_hash_t **result)
             continue;
         }
 
-        if (strcmp(node->ifa_name, (*self)->name) != 0) {
+        if (strcmp(node->ifa_name, self->name) != 0) {
             continue;
         }
 
@@ -793,34 +844,36 @@ int getIPv6(struct viface **self, apr_hash_t **result)
         if (inet_ntop(AF_INET6, &(addr->sin6_addr), buff,
                       sizeof(buff)) == NULL) {
             fprintf(stdout, "--- Unable to convert IPv6 for");
-            fprintf(stdout, " %s.\n", (*self)->name);
+            fprintf(stdout, " %s.\n", self->name);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
             return EXIT_FAILURE;
         }
 
-        char *key = (char*)apr_pcalloc((*self)->viface_pool, sizeof(buff) + 1);
-        if (key == NULL) {
+        ipv6s[i] = apr_pcalloc(TEMPORAL_POOL, sizeof(buff) + 1);
+        if (ipv6s[i] == NULL) {
             fprintf(stdout, "--- Memory could not be allocated for");
             fprintf(stdout, " getting IPv6 addresses.\n");
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
+            return EXIT_FAILURE;
         }
-        apr_cpystrn(key, buff, sizeof(buff));
-
-        apr_hash_set(*result, key, APR_HASH_KEY_STRING, key);
+        apr_cpystrn(ipv6s[i], buff, sizeof(buff));
+        i++;
     }
 
     freeifaddrs(head);
+    *result = ipv6s;
     return EXIT_SUCCESS;
 }
 
-int isUp(struct viface **self, bool *result)
+int viface_is_up(struct viface* self, bool* result)
 {
     // Read interface flags
     struct ifreq ifr;
-    if (read_flags((*self)->kernel_socket, (*self)->name,
-                   &ifr) == EXIT_FAILURE) {
+
+    if (viface_read_flags(self->kernel_socket, self->name,
+                          &ifr) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
@@ -828,15 +881,15 @@ int isUp(struct viface **self, bool *result)
     return EXIT_SUCCESS;
 }
 
-int up(struct viface **self)
+int viface_up(struct viface* self)
 {
-    bool is_up;
-    if (isUp(&*self, &is_up) == EXIT_FAILURE) {
+    bool is_viface_up;
+    if (viface_is_up(self, &is_viface_up) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
-    if (is_up) {
-        fprintf(stdout, "--- Virtual interface %s", (*self)->name);
+    if (is_viface_up) {
+        fprintf(stdout, "--- Virtual interface %s", self->name);
         fprintf(stdout, " is already up.\n");
         fprintf(stdout, "    up() Operation not permitted.\n");
         return EXIT_FAILURE;
@@ -844,17 +897,18 @@ int up(struct viface **self)
 
     // Read interface flags
     struct ifreq ifr;
-    if (read_flags((*self)->kernel_socket, (*self)->name,
-                   &ifr) == EXIT_FAILURE) {
+    if (viface_read_flags(self->kernel_socket, self->name,
+                          &ifr) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
     // Set MAC address
-    bool is_mac_isEmpty;
-    isEmpty((*self)->mac, &is_mac_isEmpty);
-    if (!is_mac_isEmpty) {
-        uint8_t *mac_bin;
-        if (parse_mac(&*self, (*self)->mac, &mac_bin) == EXIT_FAILURE) {
+    bool is_mac_empty;
+    viface_is_empty(self->mac, &is_mac_empty);
+    if (!is_mac_empty) {
+        uint8_t* mac_bin;
+
+        if (viface_parse_mac(self, self->mac, &mac_bin) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
 
@@ -864,9 +918,9 @@ int up(struct viface **self)
             ifr.ifr_hwaddr.sa_data[i] = mac_bin[i];
         }
 
-        if (ioctl((*self)->kernel_socket, SIOCSIFHWADDR, &ifr) != 0) {
-            fprintf(stdout, "--- Unable to set MAC Address (%s)", (*self)->mac);
-            fprintf(stdout, " for %s.\n", (*self)->name);
+        if (ioctl(self->kernel_socket, SIOCSIFHWADDR, &ifr) != 0) {
+            fprintf(stdout, "--- Unable to set MAC Address (%s)", self->mac);
+            fprintf(stdout, " for %s.\n", self->name);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
             return EXIT_FAILURE;
@@ -879,19 +933,19 @@ int up(struct viface **self)
     addr->sin_family = AF_INET;
 
     // Address
-    bool is_ipv4_isEmpty;
-    isEmpty((*self)->ipv4, &is_ipv4_isEmpty);
-    if (!is_ipv4_isEmpty) {
-        if (!inet_pton(AF_INET, (*self)->ipv4, &addr->sin_addr)) {
+    bool is_ipv4_empty;
+    viface_is_empty(self->ipv4, &is_ipv4_empty);
+    if (!is_ipv4_empty) {
+        if (!inet_pton(AF_INET, self->ipv4, &addr->sin_addr)) {
             fprintf(stdout, "--- Invalid cached IPv4 address");
-            fprintf(stdout, " (%s) for %s.\n", (*self)->ipv4, (*self)->name);
+            fprintf(stdout, " (%s) for %s.\n", self->ipv4, self->name);
             fprintf(stdout, "    Something really bad happened :/\n");
             return EXIT_FAILURE;
         }
 
-        if (ioctl((*self)->kernel_socket, SIOCSIFADDR, &ifr) != 0) {
+        if (ioctl(self->kernel_socket, SIOCSIFADDR, &ifr) != 0) {
             fprintf(stdout, "--- Unable to set IPv4");
-            fprintf(stdout, " (%s) for %s.\n", (*self)->ipv4, (*self)->name);
+            fprintf(stdout, " (%s) for %s.\n", self->ipv4, self->name);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
             return EXIT_FAILURE;
@@ -899,19 +953,19 @@ int up(struct viface **self)
     }
 
     // Netmask
-    bool is_netmask_isEmpty;
-    isEmpty((*self)->netmask, &is_netmask_isEmpty);
-    if (!is_netmask_isEmpty) {
-        if (!inet_pton(AF_INET, (*self)->netmask, &addr->sin_addr)) {
+    bool is_netmask_empty;
+    viface_is_empty(self->netmask, &is_netmask_empty);
+    if (!is_netmask_empty) {
+        if (!inet_pton(AF_INET, self->netmask, &addr->sin_addr)) {
             fprintf(stdout, "--- Invalid cached IPv4 netmask");
-            fprintf(stdout, " (%s) for %s.\n", (*self)->netmask, (*self)->name);
+            fprintf(stdout, " (%s) for %s.\n", self->netmask, self->name);
             fprintf(stdout, "    Something really bad happened :/\n");
             return EXIT_FAILURE;
         }
 
-        if (ioctl((*self)->kernel_socket, SIOCSIFNETMASK, &ifr) != 0) {
+        if (ioctl(self->kernel_socket, SIOCSIFNETMASK, &ifr) != 0) {
             fprintf(stdout, "--- Unable to set IPv4 netmask");
-            fprintf(stdout, " (%s) for %s.\n", (*self)->netmask, (*self)->name);
+            fprintf(stdout, " (%s) for %s.\n", self->netmask, self->name);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
             return EXIT_FAILURE;
@@ -919,21 +973,21 @@ int up(struct viface **self)
     }
 
     // Broadcast
-    bool is_broadcast_isEmpty;
-    isEmpty((*self)->broadcast, &is_broadcast_isEmpty);
-    if (!is_broadcast_isEmpty) {
-        if (!inet_pton(AF_INET, (*self)->broadcast, &addr->sin_addr)) {
+    bool is_broadcast_empty;
+    viface_is_empty(self->broadcast, &is_broadcast_empty);
+    if (!is_broadcast_empty) {
+        if (!inet_pton(AF_INET, self->broadcast, &addr->sin_addr)) {
             fprintf(stdout, "--- Invalid cached IPv4 broadcast");
-            fprintf(stdout, " (%s) for", (*self)->broadcast);
-            fprintf(stdout, " %s.\n", (*self)->name);
+            fprintf(stdout, " (%s) for", self->broadcast);
+            fprintf(stdout, " %s.\n", self->name);
             fprintf(stdout, "    Something really bad happened :/\n");
             return EXIT_FAILURE;
         }
 
-        if (ioctl((*self)->kernel_socket, SIOCSIFBRDADDR, &ifr) != 0) {
+        if (ioctl(self->kernel_socket, SIOCSIFBRDADDR, &ifr) != 0) {
             fprintf(stdout, "--- Unable to set IPv4 broadcast");
-            fprintf(stdout, " (%s) for", (*self)->broadcast);
-            fprintf(stdout, " %s.\n", (*self)->name);
+            fprintf(stdout, " (%s) for", self->broadcast);
+            fprintf(stdout, " %s.\n", self->name);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
             return EXIT_FAILURE;
@@ -942,40 +996,34 @@ int up(struct viface **self)
 
     // Set IPv6 related
     // FIXME: Refactor self, it's ugly :/
-    if (apr_hash_count((*self)->ipv6s) != 0) {
+    if (self->ipv6s != NULL) {
         struct in6_ifreq ifr6;
         memset(&ifr6, 0, sizeof(struct in6_ifreq));
 
         // Get interface index
-        if (ioctl((*self)->kernel_socket, SIOGIFINDEX, &ifr) < 0) {
+        if (ioctl(self->kernel_socket, SIOGIFINDEX, &ifr) < 0) {
             fprintf(stdout, "--- Unable to get interface index for");
-            fprintf(stdout, " (%s).\n", (*self)->name);
+            fprintf(stdout, " (%s).\n", self->name);
             fprintf(stdout, "    Something really bad happened :/\n");
             return EXIT_FAILURE;
         }
         ifr6.ifr6_ifindex = ifr.ifr_ifindex;
         ifr6.ifr6_prefixlen = 64;
 
-        apr_hash_index_t *index = NULL;
-        void *ipv6_hash;
-        char *ipv6;
-
-        for (index = apr_hash_first((*self)->viface_pool, (*self)->ipv6s);
-             index; index = apr_hash_next(index)) {
-            apr_hash_this(index, NULL, NULL, &ipv6_hash);
-            ipv6 = (char*)ipv6_hash;
+        int i = 0;
+        for (i = 0; i < 2; i++) {
             // Parse IPv6 address into IPv6 address structure
-            if (!inet_pton(AF_INET6, ipv6, &ifr6.ifr6_addr)) {
+            if (!inet_pton(AF_INET6, self->ipv6s[i], &ifr6.ifr6_addr)) {
                 fprintf(stdout, "--- Invalid cached IPv6 address");
-                fprintf(stdout, " (%s) for %s.\n", ipv6, (*self)->name);
+                fprintf(stdout, " (%s) for %s.\n", self->ipv6s[i], self->name);
                 fprintf(stdout, "    Something really bad happened :/\n");
                 return EXIT_FAILURE;
             }
 
             // Set IPv6 address
-            if (ioctl((*self)->kernel_socket_ipv6, SIOCSIFADDR, &ifr6) < 0) {
+            if (ioctl(self->kernel_socket_ipv6, SIOCSIFADDR, &ifr6) < 0) {
                 fprintf(stdout, "--- Unable to set IPv6 address");
-                fprintf(stdout, " (%s) for %s.\n", ipv6, (*self)->name);
+                fprintf(stdout, " (%s) for %s.\n", self->ipv6s[i], self->name);
                 fprintf(stdout, "    Error: %s", strerror(errno));
                 fprintf(stdout, " (%d).\n", errno);
                 return EXIT_FAILURE;
@@ -984,19 +1032,20 @@ int up(struct viface **self)
     }
 
     // Set MTU
-    ifr.ifr_mtu = (*self)->mtu;
-    if (ioctl((*self)->kernel_socket, SIOCSIFMTU, &ifr) != 0) {
+    ifr.ifr_mtu = self->mtu;
+    if (ioctl(self->kernel_socket, SIOCSIFMTU, &ifr) != 0) {
         fprintf(stdout, "--- Unable to set MTU");
-        fprintf(stdout, " (%d) for %s.\n", (*self)->mtu, (*self)->name);
+        fprintf(stdout, " (%d) for %s.\n", self->mtu, self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
-    (*self)->pktbuff =
-        (uint8_t*)realloc((*self)->pktbuff, sizeof((*self)->mtu));
-    if ((*self)->pktbuff == NULL) {
+
+    self->pktbuff = apr_pcalloc(self->viface_pool, sizeof(self->mtu));
+
+    if (self->pktbuff == NULL) {
         fprintf(stdout, "--- Memory could not be reallocated for pktbuff");
-        fprintf(stdout, " for %s network interface.\n", (*self)->name);
+        fprintf(stdout, " for %s network interface.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -1004,9 +1053,9 @@ int up(struct viface **self)
 
     // Bring-up interface
     ifr.ifr_flags |= IFF_UP;
-    if (ioctl((*self)->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
+    if (ioctl(self->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
         fprintf(stdout, "--- Unable to bring-up interface");
-        fprintf(stdout, " %s.\n", (*self)->name);
+        fprintf(stdout, " %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -1015,20 +1064,20 @@ int up(struct viface **self)
     return EXIT_SUCCESS;
 }
 
-int down(struct viface **self)
+int viface_down(struct viface* self)
 {
     // Read interface flags
     struct ifreq ifr;
-    if (read_flags((*self)->kernel_socket, (*self)->name,
-                   &ifr) == EXIT_FAILURE) {
+    if (viface_read_flags(self->kernel_socket, self->name,
+                          &ifr) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
     // Bring-down interface
     ifr.ifr_flags &= ~IFF_UP;
-    if (ioctl((*self)->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
+    if (ioctl(self->kernel_socket, SIOCSIFFLAGS, &ifr) != 0) {
         fprintf(stdout, "--- Unable to bring-down interface");
-        fprintf(stdout, " %s.\n", (*self)->name);
+        fprintf(stdout, " %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -1036,10 +1085,10 @@ int down(struct viface **self)
     return EXIT_SUCCESS;
 }
 
-int receive(struct viface **self, uint8_t **result)
+int viface_receive(struct viface* self, uint8_t** result)
 {
     // Read packet into our buffer
-    int nread = read((*self)->queues.rx, &((*self)->pktbuff[0]), (*self)->mtu);
+    int nread = read(self->queues.rx, &(self->pktbuff[0]), self->mtu);
 
     // Handle errors
     if (nread == -1) {
@@ -1060,12 +1109,11 @@ int receive(struct viface **self, uint8_t **result)
         // an application that frozes for no apparent reason.
         //
         if (errno == EAGAIN) {
-            char *packet =
-                (char*)apr_pcalloc((*self)->viface_pool, sizeof(char) * (3));
+            char *packet = apr_pcalloc(TEMPORAL_POOL, sizeof(char) * (3));
 
             if (packet == NULL) {
                 fprintf(stdout, "--- Memory could not be allocated for the");
-                fprintf(stdout, " received packet for %s", (*self)->name);
+                fprintf(stdout, " received packet for %s", self->name);
                 fprintf(stdout, " network interface.\n");
                 fprintf(stdout, "    Error: %s", strerror(errno));
                 fprintf(stdout, " (%d).\n", errno);
@@ -1080,32 +1128,31 @@ int receive(struct viface **self, uint8_t **result)
         }
 
         // Something bad happened
-        fprintf(stdout, "--- IO error while reading from %s.\n", (*self)->name);
+        fprintf(stdout, "--- IO error while reading from %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
     // Copy packet from buffer and return
-    char *packet =
-        (char*)apr_pcalloc((*self)->viface_pool, sizeof(char) * (nread + 2));
+    char *packet = apr_pcalloc(TEMPORAL_POOL, sizeof(char) * (nread + 2));
 
     if (packet == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for the received");
-        fprintf(stdout, " packet for %s network interface.\n", (*self)->name);
+        fprintf(stdout, " packet for %s network interface.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
-    memcpy(&packet[1], (*self)->pktbuff, nread);
+    memcpy(&packet[1], self->pktbuff, nread);
     packet[0] = nread;
     packet[nread + 1] = '\0';
     *result = (uint8_t*)packet;
     return EXIT_SUCCESS;
 }
 
-int send_packet(struct viface **self, uint8_t *packet)
+int viface_send(struct viface* self, uint8_t* packet)
 {
     int size = packet[0];
 
@@ -1117,17 +1164,17 @@ int send_packet(struct viface **self, uint8_t *packet)
         return EXIT_FAILURE;
     }
 
-    if (size > (*self)->mtu) {
+    if (size > self->mtu) {
         fprintf(stdout, "--- Packet too large (%d)", size);
-        fprintf(stdout, " for current MTU (> %d).\n", (*self)->mtu);
+        fprintf(stdout, " for current MTU (> %d).\n", self->mtu);
         return EXIT_FAILURE;
     }
 
     // Write packet to TX queue
-    int written = write((*self)->queues.tx, &packet[1], size);
+    int written = write(self->queues.tx, &packet[1], size);
 
     if (written != size) {
-        fprintf(stdout, "--- IO error while writting to %s.\n", (*self)->name);
+        fprintf(stdout, "--- IO error while writting to %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -1135,27 +1182,37 @@ int send_packet(struct viface **self, uint8_t *packet)
     return EXIT_SUCCESS;
 }
 
-int listStats(struct viface **self, apr_hash_t **result)
+int viface_list_stats(struct viface* self, char** result[])
 {
-    // Creates hash table
-    *result = apr_hash_make((*self)->viface_pool);
-
     DIR* dir;
     struct dirent* ent;
+    int i = 0;
+
+    char** stats_names = apr_pcalloc(TEMPORAL_POOL, sizeof(char*) * 23);
+    apr_hash_t *hash_stats = apr_hash_make(self->viface_pool);
+
+    if ((stats_names == NULL) ||
+        (hash_stats == NULL)) {
+        fprintf(stdout, "--- Memory could not be allocated for");
+        fprintf(stdout, " network interface statistics.\n");
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
 
     int size_bytes_stats_path = strlen("/sys/class/net/") +
-                                strlen((*self)->name) + strlen("/statistics/");
+                                strlen(self->name) + strlen("/statistics/");
 
     char stats_path[size_bytes_stats_path + 1];
     memset(&stats_path, 0, size_bytes_stats_path);
 
     snprintf(stats_path, sizeof(stats_path), "%s%s%s",
-             "/sys/class/net/", (*self)->name, "/statistics/");
+             "/sys/class/net/", self->name, "/statistics/");
 
     // Open directory
     if ((dir = opendir(stats_path)) == NULL) {
         fprintf(stdout, "--- Unable to open statistics folder for interface");
-        fprintf(stdout, " %s:\n", (*self)->name);
+        fprintf(stdout, " %s:\n", self->name);
         fprintf(stdout, "    %s.\n", stats_path);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
@@ -1165,68 +1222,73 @@ int listStats(struct viface **self, apr_hash_t **result)
     // List files
     while ((ent = readdir(dir)) != NULL) {
         //char entry = ent->d_name;
-        char *entry = ent->d_name;
+        char* entry = ent->d_name;
 
         // Ignore current, parent and hidden files
         if (entry[0] != '.') {
-            char *key =
-                (char*)apr_pcalloc((*self)->viface_pool, strlen(entry) + 1);
+            char *key = apr_pcalloc(TEMPORAL_POOL, strlen(entry) + 1);
+
             if (key == NULL) {
                 fprintf(stdout, "--- Memory could not be allocated");
-                fprintf(stdout, " getting statistics names.\n");
+                fprintf(stdout, " for statistic name %s.\n", entry);
                 fprintf(stdout, "    Error: %s", strerror(errno));
                 fprintf(stdout, " (%d).\n", errno);
+                return EXIT_FAILURE;
             }
-            apr_cpystrn(key, entry, strlen(entry) + 1);
 
-            apr_hash_set(*result, key, APR_HASH_KEY_STRING, key);
+            apr_cpystrn(key, entry, strlen(entry) + 1);
+            apr_hash_set(hash_stats, key, APR_HASH_KEY_STRING, key);
+            stats_names[i] = key;
+            i++;
         }
     }
 
     // Close directory
     if (closedir(dir) != 0) {
         fprintf(stdout, "--- Unable to close statistics folder for interface");
-        fprintf(stdout, " %s:\n", (*self)->name);
+        fprintf(stdout, " %s:\n", self->name);
         fprintf(stdout, "    %s.\n", stats_path);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
+    *result = stats_names;
+
     // Update cache
-    (*self)->stats_keys_cache = *result;
+    self->stats_keys_cache = hash_stats;
     return EXIT_SUCCESS;
 }
 
 
-int readStatFile(struct viface **self, char *stat, uint64_t *result)
+int viface_read_stat_file(struct viface* self, char* stat, uint64_t* result)
 {
     // If no cache exists, create it.
-    if (apr_hash_count((*self)->stats_keys_cache) == 0) {
-        apr_hash_t *hash;
-        if (listStats(&*self, &hash) == EXIT_FAILURE) {
+    if (apr_hash_count(self->stats_keys_cache) == 0) {
+        char** stats_names;
+        if (viface_list_stats(self, &stats_names) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
     }
 
     // Check if stat is valid
-    if (apr_hash_get((*self)->stats_keys_cache, stat,
+    if (apr_hash_get(self->stats_keys_cache, stat,
                      APR_HASH_KEY_STRING) == NULL) {
         fprintf(stdout, "--- Unknown statistic %s", stat);
-        fprintf(stdout, " for interface %s.\n", (*self)->name);
+        fprintf(stdout, " for interface %s.\n", self->name);
         return EXIT_FAILURE;
     }
 
     // Open file
     int size_bytes_stats_path = strlen("/sys/class/net/") +
-                                strlen((*self)->name) +
+                                strlen(self->name) +
                                 strlen("/statistics/") + strlen(stat);
 
     char stats_path[size_bytes_stats_path + 1];
     memset(&stats_path, 0, size_bytes_stats_path);
 
     snprintf(stats_path, sizeof(stats_path), "%s%s%s%s",
-             "/sys/class/net/", (*self)->name, "/statistics/", stat);
+             "/sys/class/net/", self->name, "/statistics/", stat);
 
     int fd = -1;
     int nread = -1;
@@ -1238,7 +1300,7 @@ int readStatFile(struct viface **self, char *stat, uint64_t *result)
     // Check file open
     if (fd < 0) {
         fprintf(stdout, "--- Unable to open statistics file %s", stats_path);
-        fprintf(stdout, " for interface %s.\n", (*self)->name);
+        fprintf(stdout, " for interface %s.\n", self->name);
         return EXIT_FAILURE;
     }
 
@@ -1249,7 +1311,7 @@ int readStatFile(struct viface **self, char *stat, uint64_t *result)
     // Handles errors
     if (nread == -1) {
         fprintf(stdout, "--- Unable to read statistics file %s", stats_path);
-        fprintf(stdout, " for interface %s.\n", (*self)->name);
+        fprintf(stdout, " for interface %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
@@ -1257,46 +1319,46 @@ int readStatFile(struct viface **self, char *stat, uint64_t *result)
 
     if (close(fd) < 0) {
         fprintf(stdout, "--- Unable to close statistics file %s", stats_path);
-        fprintf(stdout, " for interface %s.\n", (*self)->name);
+        fprintf(stdout, " for interface %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
 
     // Create entry if this stat wasn't cached
-    if (apr_hash_get((*self)->stats_cache, stat,
+    if (apr_hash_get(self->stats_cache, stat,
                      APR_HASH_KEY_STRING) == NULL) {
-        char *key = (char*)apr_pcalloc((*self)->viface_pool, strlen(stat) + 1);
+        char* key = apr_pcalloc(self->viface_pool, strlen(stat) + 1);
 
-        uint64_t *value =
-            (uint64_t*)apr_pcalloc((*self)->viface_pool, sizeof(uint64_t));
+        uint64_t* value = apr_pcalloc(self->viface_pool, sizeof(uint64_t));
 
         if ((key == NULL) ||
             (value == NULL)) {
             fprintf(stdout, "--- Memory could not be allocated reading");
-            fprintf(stdout, " statistics values for %s.\n", (*self)->name);
+            fprintf(stdout, " statistics values for %s.\n", self->name);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
+            return EXIT_FAILURE;
         }
         apr_cpystrn(key, stat, strlen(stat) + 1);
         *value = 0;
 
-        apr_hash_set((*self)->stats_cache, key, APR_HASH_KEY_STRING, value);
+        apr_hash_set(self->stats_cache, key, APR_HASH_KEY_STRING, value);
     }
 
     *result = strtoul(buffer, NULL, 10);
     return EXIT_SUCCESS;
 }
 
-int readStat(struct viface **self, char *stat, uint64_t *result)
+int viface_read_stat(struct viface* self, char* stat, uint64_t* result)
 {
     uint64_t value;
-    if (readStatFile(&*self, stat, &value) == EXIT_FAILURE) {
+    if (viface_read_stat_file(self, stat, &value) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
-    uint64_t *cache =
-        (uint64_t*)apr_hash_get((*self)->stats_cache,
+    uint64_t* cache =
+        (uint64_t*)apr_hash_get(self->stats_cache,
                                 stat, APR_HASH_KEY_STRING);
 
     if (cache != NULL) {
@@ -1309,48 +1371,51 @@ int readStat(struct viface **self, char *stat, uint64_t *result)
     return EXIT_SUCCESS;
 }
 
-int clearStat(struct viface **self, char *stat)
+int viface_clear_stat(struct viface* self, char* stat)
 {
-    uint64_t *value =
-        (uint64_t*)apr_pcalloc((*self)->viface_pool, sizeof(uint64_t));
+    uint64_t* value = apr_pcalloc(self->viface_pool, sizeof(uint64_t));
 
     if (value == NULL) {
         fprintf(stdout, "--- Memory could not be allocated clearing");
-        fprintf(stdout, " statistics values for %s.\n", (*self)->name);
+        fprintf(stdout, " statistics values for %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
-    }
-
-    if (readStatFile(&*self, stat, &*value) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
-    char *key = (char*)apr_pcalloc((*self)->viface_pool, strlen(stat) + 1);
+    if (viface_read_stat_file(self, stat, &*value) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
+
+    char* key = apr_pcalloc(self->viface_pool, strlen(stat) + 1);
     if (key == NULL) {
         fprintf(stdout, "--- Memory could not be allocated clearing");
-        fprintf(stdout, " statistics values for %s.\n", (*self)->name);
+        fprintf(stdout, " statistics values for %s.\n", self->name);
         fprintf(stdout, "    Error: %s", strerror(errno));
         fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
     }
     apr_cpystrn(key, stat, strlen(stat) + 1);
 
     // Set current value as cache
-    apr_hash_set((*self)->stats_cache, key, APR_HASH_KEY_STRING, value);
+    apr_hash_set(self->stats_cache, key, APR_HASH_KEY_STRING, value);
+
     return EXIT_SUCCESS;
 }
 
-int dispatch(struct viface **self, my_ring_t *ifaces,
-             dispatcher_cb callback, int millis)
+int viface_dispatch(struct viface* self, int num_ifaces, struct viface** ifaces,
+                    dispatcher_cb callback, int millis)
 {
     int fd = -1;
-    int fdsread = -1;
+    int fds_read = -1;
     int nfds = -1;
     struct timeval tv;
     struct timeval* tvp = NULL;
 
-    // Check non-isEmpty set
-    if (APR_RING_EMPTY(ifaces, viface, link) == 1) {
-        fprintf(stdout, "--- isEmpty virtual interfaces set.\n");
+    // Check non-is_empty( set
+    if ((num_ifaces == 0) ||
+        (ifaces == NULL)) {
+        fprintf(stdout, "--- is_empty( virtual interfaces set.\n");
         return EXIT_FAILURE;
     }
 
@@ -1359,27 +1424,31 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
         tvp = &tv;
     }
 
-    apr_hash_t *reverse_id = apr_hash_make((*self)->viface_pool);
+    apr_hash_t* reverse_id = apr_hash_make(TEMPORAL_POOL);
+    if (reverse_id == NULL) {
+        fprintf(stdout, "--- Memory could not be allocated for");
+        fprintf(stdout, " APR hash table.\n");
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
 
     // Create and clear set of file descriptors
     fd_set rfds;
 
-    struct viface *iface;
+    int i = 0;
 
     // Create map of file descriptors and get maximum file descriptor for
     // select call
-    for (iface = APR_RING_FIRST(ifaces);
-         iface != APR_RING_SENTINEL(ifaces, viface, link);
-         iface = APR_RING_NEXT(iface, link)) {
+    for (i = 0; i < num_ifaces; i++) {
         // Store identity
-        if (getRX(&iface, &fd) == EXIT_FAILURE) {
+        if (viface_get_rx(ifaces[i], &fd) == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
-        char *key = (char*)apr_pcalloc(iface->viface_pool, sizeof(int));
+        char* key = apr_pcalloc(TEMPORAL_POOL, sizeof(int));
 
-        struct viface *value =
-            (struct viface*)apr_pcalloc(iface->viface_pool,
-                                        sizeof(struct viface));
+        struct viface* value = apr_pcalloc(TEMPORAL_POOL,
+                                           sizeof(struct viface));
 
         if ((key == NULL) ||
             (value == NULL)) {
@@ -1387,9 +1456,10 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
             fprintf(stdout, " for dispatch.\n");
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
+            return EXIT_FAILURE;
         }
         *key = fd;
-        value = iface;
+        value = ifaces[i];
         apr_hash_set(reverse_id, key, APR_HASH_KEY_STRING, value);
 
         // Get maximum file descriptor
@@ -1403,10 +1473,8 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
     while (true) {
         // Re-create set
         FD_ZERO(&rfds);
-        for (iface = APR_RING_FIRST(ifaces);
-             iface != APR_RING_SENTINEL(ifaces, viface, link);
-             iface = APR_RING_NEXT(iface, link)) {
-            if (getRX(&iface, &fd) == EXIT_FAILURE) {
+        for (i = 0; i < num_ifaces; i++) {
+            if (viface_get_rx(ifaces[i], &fd) == EXIT_FAILURE) {
                 return EXIT_FAILURE;
             }
             FD_SET(fd, &rfds);
@@ -1418,10 +1486,10 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
             tv.tv_usec = (millis % 1000) * 1000;
         }
 
-        fdsread = select(nfds, &rfds, NULL, NULL, tvp);
+        fds_read = select(nfds, &rfds, NULL, NULL, tvp);
 
         // Check if select error
-        if (fdsread == -1) {
+        if (fds_read == -1) {
             // A signal was caught. Return.
             if (errno == EINTR) {
                 return EXIT_SUCCESS;
@@ -1429,27 +1497,27 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
 
             // Something bad happened
             fprintf(stdout, "--- Unknown error in select() system call:");
-            fprintf(stdout, " %d.\n", fdsread);
+            fprintf(stdout, " %d.\n", fds_read);
             fprintf(stdout, "    Error: %s", strerror(errno));
             fprintf(stdout, " (%d).\n", errno);
             return EXIT_FAILURE;
         }
 
         // Check if timeout
-        if (tvp != NULL && fdsread == 0) {
+        if (tvp != NULL && fds_read == 0) {
             return EXIT_SUCCESS;
         }
 
-        apr_hash_index_t *index = NULL;
-        void *pair_hash;
-        struct viface *pair;
+        apr_hash_index_t* index = NULL;
+        void* pair_hash;
+        struct viface* pair;
         int key = -1;
 
-        for (index = apr_hash_first((*self)->viface_pool, reverse_id); index;
+        for (index = apr_hash_first(self->viface_pool, reverse_id); index;
              index = apr_hash_next(index)) {
             apr_hash_this(index, NULL, NULL, &pair_hash);
             pair = (struct viface*)pair_hash;
-            if (getRX(&pair, &key) == EXIT_FAILURE) {
+            if (viface_get_rx(pair, &key) == EXIT_FAILURE) {
                 return EXIT_FAILURE;
             }
 
@@ -1459,8 +1527,8 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
             }
 
             // File descriptor is ready, perform read and dispatch
-            uint8_t *packet;
-            if (receive(&pair, &packet) == EXIT_FAILURE) {
+            uint8_t* packet;
+            if (viface_receive(pair, &packet) == EXIT_FAILURE) {
                 return EXIT_FAILURE;
             }
 
@@ -1470,17 +1538,17 @@ int dispatch(struct viface **self, my_ring_t *ifaces,
                 continue;
             }
 
-            char *name;
+            char* name;
             uint id;
 
-            if ((getName(&pair, &name) == EXIT_FAILURE) ||
-                (getID(&pair, &id) == EXIT_FAILURE)) {
+            if ((viface_get_name(pair, &name) == EXIT_FAILURE) ||
+                (viface_get_id(pair, &id) == EXIT_FAILURE)) {
                 return EXIT_FAILURE;
             }
 
             // Dispatch packet
             bool result_callback = false;
-            if (callback(&pair, name, id, &packet, &result_callback) ==
+            if (callback(pair, name, id, packet, &result_callback) ==
                 EXIT_FAILURE) {
                 return EXIT_FAILURE;
             }

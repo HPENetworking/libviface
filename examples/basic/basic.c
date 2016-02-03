@@ -19,36 +19,24 @@
 
 // Interface configuration data
 static char name[IFNAMSIZ] = "viface0";
-static char *ip = "192.168.25.46";
-static char* mac = "ec:f1:f8:d5:47:6b";
-static char* broadcast = "192.168.25.255";
-static char* netmask = "255.255.255.0";
+static char ip[INET_ADDRSTRLEN] = "192.168.25.46";
+static char mac[18] = "ec:f1:f8:d5:47:6b";
+static char broadcast[INET_ADDRSTRLEN] = "192.168.25.255";
+static char netmask[INET_ADDRSTRLEN] = "255.255.255.0";
 static uint mtu = 1000;
 static int id = 1;
-
-// Creates a network interface
-int createsInterface(struct viface **self, apr_pool_t **parent_pool)
-{
-    // Creates interface
-    if ((viface_create(&*parent_pool, &*self) == EXIT_FAILURE) ||
-        (vifaceImpl(&*self, name, true, id) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
-}
 
 /* Sets network configuration data
  * (name, id, ip, mac, netmask, broadcast, mtu).
  */
-int setInterfaceConfiguration(struct viface **self)
+int set_interface_configuration(struct viface* self)
 {
     // Configures interface
-    if ((setIPv4(&*self, ip) == EXIT_FAILURE) ||
-        (setMAC(&*self, mac) == EXIT_FAILURE) ||
-        (setIPv4Broadcast(&*self, broadcast) == EXIT_FAILURE) ||
-        (setIPv4Netmask(&*self, netmask) == EXIT_FAILURE) ||
-        (setMTU(&*self, mtu) == EXIT_FAILURE)) {
+    if ((viface_set_ipv4(self, ip) == EXIT_FAILURE) ||
+        (viface_set_mac(self, mac) == EXIT_FAILURE) ||
+        (viface_set_ipv4_broadcast(self, broadcast) == EXIT_FAILURE) ||
+        (viface_set_ipv4_netmask(self, netmask) == EXIT_FAILURE) ||
+        (viface_set_mtu(self, mtu) == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
@@ -57,73 +45,73 @@ int setInterfaceConfiguration(struct viface **self)
 /* Checks the interface configuration data
  * (name, id, ip, mac, netmask, broadcast, mtu).
  */
-int checkInterfaceConfiguration(struct viface **self)
+int check_interface_configuration(struct viface* self)
 {
-    char *vifaceName;
-    int idValue;
-    bool is_up;
-    char *ipValue;
-    char *macValue;
-    char *broadcastValue;
-    char *netmaskValue;
-    uint mtuValue;
+    int id_value;
+    bool is_viface_up;
+    uint mtu_value;
+    char* viface_name;
+    char* ip_value;
+    char* mac_value;
+    char* broadcast_value;
+    char* netmask_value;
 
     // Gets interface configuration data
-    if ((getName(&*self, &vifaceName) == EXIT_FAILURE) ||
-        (getID(&*self, &idValue) == EXIT_FAILURE) ||
-        (isUp(&*self, &is_up) == EXIT_FAILURE) ||
-        (getIPv4(&*self, &ipValue) == EXIT_FAILURE) ||
-        (getMAC(&*self, &macValue) == EXIT_FAILURE) ||
-        (getIPv4Broadcast(&*self, &broadcastValue) == EXIT_FAILURE) ||
-        (getIPv4Netmask(&*self, &netmaskValue) == EXIT_FAILURE) ||
-        (getMTU(&*self, &mtuValue) == EXIT_FAILURE)) {
+    if ((viface_get_name(self, &viface_name) == EXIT_FAILURE) ||
+        (viface_get_id(self, &id_value) == EXIT_FAILURE) ||
+        (viface_is_up(self, &is_viface_up) == EXIT_FAILURE) ||
+        (viface_get_ipv4(self, &ip_value) == EXIT_FAILURE) ||
+        (viface_get_mac(self, &mac_value) == EXIT_FAILURE) ||
+        (viface_get_ipv4_broadcast(self, &broadcast_value) == EXIT_FAILURE) ||
+        (viface_get_ipv4_netmask(self, &netmask_value) == EXIT_FAILURE) ||
+        (viface_get_mtu(self, &mtu_value) == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
 
     printf("********** Viface Configuration Data **********\n\n");
 
     // Checks interface name
-    printf("--- Viface name is: %s.\n", vifaceName);
+    printf("--- Viface name is: %s.\n", viface_name);
     printf("    Expected:       %s.\n\n", name);
 
     // Checks interface ID
-    printf("--- Viface ID is: %d.\n", idValue);
+    printf("--- Viface ID is: %d.\n", id_value);
     printf("    Expected:     %d.\n\n", id);
 
     // Checks if interface is Up
-    printf("--- Interface isUp: %s\n", is_up ? "true" : "false");
+    printf("--- Interface isUp: %s\n", is_viface_up ? "true" : "false");
     printf("    Expected:       true.\n\n");
 
     // Checks interface IP
-    printf("--- IP value is: %s\n", ipValue);
+    printf("--- IP value is: %s\n", ip_value);
     printf("    Expected:    %s.\n\n", ip);
 
     // Checks mac value
-    printf("--- MAC value is: %s\n", macValue);
+    printf("--- MAC value is: %s\n", mac_value);
     printf("    Expected:     %s.\n\n", mac);
 
     // Checks broadcast value
-    printf("--- Broadcast value is: %s\n", broadcastValue);
+    printf("--- Broadcast value is: %s\n", broadcast_value);
     printf("    Expected:           %s.\n\n", broadcast);
 
     // Checks netmask value
-    printf("--- Netmask value is: %s\n", netmaskValue);
+    printf("--- Netmask value is: %s\n", netmask_value);
     printf("    Expected:         %s.\n\n", netmask);
 
     // Checks mtu value
-    printf("--- MTU value is: %d\n", mtuValue);
+    printf("--- MTU value is: %d\n", mtu_value);
     printf("    Expected:     %u.\n\n", mtu);
 
     return EXIT_SUCCESS;
 }
 
 // Checks if the network interface is down
-int checkInterfaceIsDown(struct viface **self)
+int check_interface_is_down(struct viface* self)
 {
     // Checks if interface is down
     bool is_down;
 
-    if (isUp(&*self, &is_down) == EXIT_FAILURE) {
+    if (viface_is_up(self, &is_down) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
 
@@ -145,7 +133,7 @@ int checkInterfaceIsDown(struct viface **self)
  */
 main(int argc, const char* argv[])
 {
-    struct viface *self;
+    struct viface* self;
 
     printf("\n--- Starting basic example...\n\n");
 
@@ -153,32 +141,28 @@ main(int argc, const char* argv[])
         strcpy(name, argv[1]);
     }
 
-    apr_initialize();
-
-    // Creates parent pool
-    apr_pool_t *parent_pool;
-    apr_pool_create(&parent_pool, NULL);
-
     /* These IF statements do the following:
-     * 1) Creates interface
-     * 2) Sets interface configuration data
-     * 3) Brings-up interface
-     * 4) Checks interface configuration data
-     * 5) Brings-down interface
-     * 6) Checks if interface is down
+     * 1) Creates global parent APR pool
+     * 2) Creates interface
+     * 3) Sets interface configuration data
+     * 4) Brings-up interface
+     * 5) Checks interface configuration data
+     * 6) Brings-down interface
+     * 7) Checks if interface is down
+     * 8) Destroys viface struct
+     * 9) Destroys global APR pool
      */
-    if ((createsInterface(&self, &parent_pool) == EXIT_FAILURE) ||
-        (setInterfaceConfiguration(&self) == EXIT_FAILURE) ||
-        (up(&self) == EXIT_FAILURE) ||
-        (checkInterfaceConfiguration(&self) == EXIT_FAILURE) ||
-        (down(&self) == EXIT_FAILURE) ||
-        (checkInterfaceIsDown(&self) == EXIT_FAILURE) ||
-        (viface_destroy(&self) == EXIT_FAILURE)) {
+    if ((viface_create_global_pool() == EXIT_FAILURE) ||
+        (viface_create_viface(name, true, id, &self) == EXIT_FAILURE) ||
+        (set_interface_configuration(self) == EXIT_FAILURE) ||
+        (viface_up(self) == EXIT_FAILURE) ||
+        (check_interface_configuration(self) == EXIT_FAILURE) ||
+        (viface_down(self) == EXIT_FAILURE) ||
+        (check_interface_is_down(self) == EXIT_FAILURE) ||
+        (viface_destroy_viface(&self) == EXIT_FAILURE) ||
+        (viface_destroy_global_pool() == EXIT_FAILURE)) {
         return EXIT_FAILURE;
     }
-
-    apr_pool_destroy(parent_pool);
-    apr_terminate();
 
     return 0;
 }

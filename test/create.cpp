@@ -22,33 +22,24 @@
 
 // Interface configuration data
 static char name[IFNAMSIZ];
-static char ip[] = "192.168.25.46";
-static char mac[] = "ec:f1:f8:d5:47:6b";
-static char broadcast[] = "192.168.25.255";
-static char netmask[] = "255.255.255.0";
+static char ip[INET_ADDRSTRLEN] = "192.168.25.46";
+static char mac[18] = "ec:f1:f8:d5:47:6b";
+static char broadcast[INET_ADDRSTRLEN] = "192.168.25.255";
+static char netmask[INET_ADDRSTRLEN] = "255.255.255.0";
 static uint mtu = 1000;
 static int id = 1;
-
-// Creates a network interface
-int createsInterface(struct viface **self, apr_pool_t **parent_pool)
-{
-    // Creates interface
-    REQUIRE(viface_create(&*parent_pool, &*self) == EXIT_SUCCESS);
-    REQUIRE(vifaceImpl(&*self, name, true, 1) == EXIT_SUCCESS);
-    return EXIT_SUCCESS;
-}
 
 /* Sets network configuration data
  * (name, id, ip, mac, netmask, broadcast, mtu).
  */
-int setInterfaceConfiguration(struct viface **self)
+int set_interface_configuration(struct viface* self)
 {
     // Configures interface
-    REQUIRE(setIPv4(&*self, ip) == EXIT_SUCCESS);
-    REQUIRE(setMAC(&*self, mac) == EXIT_SUCCESS);
-    REQUIRE(setIPv4Broadcast(&*self, broadcast) == EXIT_SUCCESS);
-    REQUIRE(setIPv4Netmask(&*self, netmask) == EXIT_SUCCESS);
-    REQUIRE(setMTU(&*self, mtu) == EXIT_SUCCESS);
+    REQUIRE(viface_set_ipv4(self, ip) == EXIT_SUCCESS);
+    REQUIRE(viface_set_mac(self, mac) == EXIT_SUCCESS);
+    REQUIRE(viface_set_ipv4_broadcast(self, broadcast) == EXIT_SUCCESS);
+    REQUIRE(viface_set_ipv4_netmask(self, netmask) == EXIT_SUCCESS);
+    REQUIRE(viface_set_mtu(self, mtu) == EXIT_SUCCESS);
 
     return EXIT_SUCCESS;
 }
@@ -56,106 +47,112 @@ int setInterfaceConfiguration(struct viface **self)
 /* Checks the interface configuration data
  * (name, id, ip, mac, netmask, broadcast, mtu).
  */
-int checkInterfaceConfiguration(struct viface **self, bool newViface)
+int check_interface_configuration(struct viface* self, bool new_viface)
 {
-    char *vifaceName;
-    uint idValue;
-    bool is_up;
-    char *ipValue;
-    char *macValue;
-    char *broadcastValue;
-    char *netmaskValue;
-    uint mtuValue;
+    uint id_value;
+    bool is_viface_up;
+    uint mtu_value;
+    char* viface_name;
+    char* ip_value;
+    char* mac_value;
+    char* broadcast_value;
+    char* netmask_value;
 
     // Gets interface configuration data
-    REQUIRE(getName(&*self, &vifaceName) == EXIT_SUCCESS);
-    REQUIRE(getID(&*self, &idValue) == EXIT_SUCCESS);
-    REQUIRE(isUp(&*self, &is_up) == EXIT_SUCCESS);
-    REQUIRE(getIPv4(&*self, &ipValue) == EXIT_SUCCESS);
-    REQUIRE(getMAC(&*self, &macValue) == EXIT_SUCCESS);
-    REQUIRE(getIPv4Broadcast(&*self, &broadcastValue) == EXIT_SUCCESS);
-    REQUIRE(getIPv4Netmask(&*self, &netmaskValue) == EXIT_SUCCESS);
-    REQUIRE(getMTU(&*self, &mtuValue) == EXIT_SUCCESS);
+    REQUIRE(viface_get_name(self, &viface_name) == EXIT_SUCCESS);
+    REQUIRE(viface_get_id(self, &id_value) == EXIT_SUCCESS);
+    REQUIRE(viface_is_up(self, &is_viface_up) == EXIT_SUCCESS);
+    REQUIRE(viface_get_ipv4(self, &ip_value) == EXIT_SUCCESS);
+    REQUIRE(viface_get_mac(self, &mac_value) == EXIT_SUCCESS);
+    REQUIRE(viface_get_ipv4_broadcast(self, &broadcast_value) == EXIT_SUCCESS);
+    REQUIRE(viface_get_ipv4_netmask(self, &netmask_value) == EXIT_SUCCESS);
+    REQUIRE(viface_get_mtu(self, &mtu_value) == EXIT_SUCCESS);
 
-    if (newViface) {
+    if (new_viface) {
         // Checks interface name
-        REQUIRE(strcmp(vifaceName, name) == 0);
+        REQUIRE(strcmp(viface_name, name) == 0);
 
         // Checks interface ID
-        REQUIRE(idValue == id);
+        REQUIRE(id_value == id);
 
         // Checks if interface is Up
-        REQUIRE(is_up == true);
+        REQUIRE(is_viface_up == true);
 
         // Checks interface IP
-        REQUIRE(strcmp(ipValue, ip) == 0);
+        REQUIRE(strcmp(ip_value, ip) == 0);
 
         // Checks mac value
-        REQUIRE(strcmp(macValue, mac) == 0);
+        REQUIRE(strcmp(mac_value, mac) == 0);
 
         // Checks broadcast value
-        REQUIRE(strcmp(broadcastValue, broadcast) == 0);
+        REQUIRE(strcmp(broadcast_value, broadcast) == 0);
 
         // Checks netmask value
-        REQUIRE(strcmp(netmaskValue, netmask) == 0);
+        REQUIRE(strcmp(netmask_value, netmask) == 0);
 
         // Checks mtu value
-        REQUIRE(mtuValue == mtu);
+        REQUIRE(mtu_value == mtu);
     }
     return EXIT_SUCCESS;
 }
 
 TEST_CASE("Creates and tests new network interface")
 {
-    bool is_up;
-    struct viface *self;
-
-    apr_initialize();
+    bool is_viface_up;
+    struct viface* self;
 
     // Sets new viface name
     strcpy(name, "viface0");
 
-    // Creates parent pool
-    apr_pool_t *parent_pool;
-    apr_pool_create(&parent_pool, NULL);
+    // Creates global APR pool
+    REQUIRE(viface_create_global_pool() == EXIT_SUCCESS);
 
     // Creates interface
-    REQUIRE(createsInterface(&self, &parent_pool) == EXIT_SUCCESS);
+    REQUIRE(viface_create_viface(name, true, id, &self) == EXIT_SUCCESS);
 
     // Sets interface configuration data
-    REQUIRE(setInterfaceConfiguration(&self) == EXIT_SUCCESS);
+    REQUIRE(set_interface_configuration(self) == EXIT_SUCCESS);
 
     // Brings-up interface
-    REQUIRE(up(&self) == 0);
+    REQUIRE(viface_up(self) == 0);
 
     // Checks interface configuration data
-    REQUIRE(checkInterfaceConfiguration(&self, true) == EXIT_SUCCESS);
+    REQUIRE(check_interface_configuration(self, true) == EXIT_SUCCESS);
 
     // Brings-down interface
-    REQUIRE(down(&self) == 0);
+    REQUIRE(viface_down(self) == 0);
 
     // Checks if interface is still Up
-    REQUIRE(isUp(&self, &is_up) == EXIT_SUCCESS);
-    REQUIRE(is_up == false);
+    REQUIRE(viface_is_up(self, &is_viface_up) == EXIT_SUCCESS);
+    REQUIRE(is_viface_up == false);
+
+    // Destroys viface struct
+    REQUIRE(viface_destroy_viface(&self) == EXIT_SUCCESS);
+
+    // Destroys static global APR pool
+    REQUIRE(viface_destroy_global_pool() == EXIT_SUCCESS);
 }
 
 TEST_CASE("Hooks and tests existing network interface")
 {
-    bool is_up;
-    struct viface *self;
-
-    apr_initialize();
+    bool is_viface_up;
+    struct viface* self;
 
     // Sets existing viface name
     strcpy(name, "eth0");
 
-    // Creates parent pool
-    apr_pool_t *parent_pool;
-    apr_pool_create(&parent_pool, NULL);
+    // Creates global APR pool
+    REQUIRE(viface_create_global_pool() == EXIT_SUCCESS);
 
     // Creates interface
-    REQUIRE(createsInterface(&self, &parent_pool) == EXIT_SUCCESS);
+    REQUIRE(viface_create_viface(name, true, id, &self) == EXIT_SUCCESS);
 
     // Checks interface configuration data
-    REQUIRE(checkInterfaceConfiguration(&self, false) == EXIT_SUCCESS);
+    REQUIRE(check_interface_configuration(self, false) == EXIT_SUCCESS);
+
+    // Destroys viface struct
+    REQUIRE(viface_destroy_viface(&self) == EXIT_SUCCESS);
+
+    // Destroys static global APR pool
+    REQUIRE(viface_destroy_global_pool() == EXIT_SUCCESS);
 }
