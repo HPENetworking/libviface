@@ -52,7 +52,7 @@ int print_packet(struct viface* self, uint8_t* packet)
 }
 
 // Dispatch callback type to handle packet reception.
-int handler(struct viface* self, char* name, uint id, uint8_t* packet,
+int handler(struct viface* self, uint8_t* packet,
             bool* result)
 {
     if (print_packet(self, packet) == EXIT_FAILURE) {
@@ -98,8 +98,6 @@ main(int argc, const char* argv[])
 
     printf("--- Press Any Key to Receive Packet.\n");
     getchar();
-
-    apr_initialize();
 
     // Creates array of viface structs
     struct viface* ifaces[2] = {iface0, iface1};

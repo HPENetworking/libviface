@@ -793,11 +793,11 @@ int viface_set_ipv6(struct viface* self, int num_ipv6s, char* ipv6s[])
 
 int viface_get_ipv6(struct viface* self, char** result[])
 {
-    int i = 0;
+    int i = 1;
 
     // Creates hash table
     char** ipv6s =
-        apr_pcalloc(TEMPORAL_POOL, sizeof(char*) * INET6_ADDRSTRLEN);
+        apr_pcalloc(TEMPORAL_POOL, sizeof(char*) * INET6_ADDRSTRLEN + 1);
 
     if (ipv6s == NULL) {
         fprintf(stdout, "--- Memory could not be allocated for");
@@ -861,6 +861,19 @@ int viface_get_ipv6(struct viface* self, char** result[])
         apr_cpystrn(ipv6s[i], buff, sizeof(buff));
         i++;
     }
+
+    char *number_ipv6s = apr_pcalloc(TEMPORAL_POOL, sizeof(int));
+
+    if (number_ipv6s == NULL) {
+        fprintf(stdout, "--- Memory could not be allocated");
+        fprintf(stdout, " getting Ipv6s for %s interface.\n", self->name);
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
+
+    sprintf(number_ipv6s,"%d", i - 1);
+    ipv6s[0] = number_ipv6s;
 
     freeifaddrs(head);
     *result = ipv6s;
@@ -1145,6 +1158,7 @@ int viface_receive(struct viface* self, uint8_t** result)
         return EXIT_FAILURE;
     }
 
+
     memcpy(&packet[1], self->pktbuff, nread);
     packet[0] = nread;
     packet[nread + 1] = '\0';
@@ -1184,11 +1198,14 @@ int viface_send(struct viface* self, uint8_t* packet)
 
 int viface_list_stats(struct viface* self, char** result[])
 {
+    const int NUMBER_STATS = 23;
+
     DIR* dir;
     struct dirent* ent;
-    int i = 0;
+    int i = 1;
 
-    char** stats_names = apr_pcalloc(TEMPORAL_POOL, sizeof(char*) * 23);
+    char** stats_names =
+        apr_pcalloc(TEMPORAL_POOL, sizeof(char*) * NUMBER_STATS + 1);
     apr_hash_t *hash_stats = apr_hash_make(self->viface_pool);
 
     if ((stats_names == NULL) ||
@@ -1218,6 +1235,19 @@ int viface_list_stats(struct viface* self, char** result[])
         fprintf(stdout, " (%d).\n", errno);
         return EXIT_FAILURE;
     }
+
+    char *number_stats = apr_pcalloc(TEMPORAL_POOL, sizeof(int));
+
+    if (number_stats == NULL) {
+        fprintf(stdout, "--- Memory could not be allocated");
+        fprintf(stdout, " for statistic size number.\n");
+        fprintf(stdout, "    Error: %s", strerror(errno));
+        fprintf(stdout, " (%d).\n", errno);
+        return EXIT_FAILURE;
+    }
+
+    sprintf(number_stats,"%d", NUMBER_STATS);
+    stats_names[0] = number_stats;
 
     // List files
     while ((ent = readdir(dir)) != NULL) {
@@ -1259,7 +1289,6 @@ int viface_list_stats(struct viface* self, char** result[])
     self->stats_keys_cache = hash_stats;
     return EXIT_SUCCESS;
 }
-
 
 int viface_read_stat_file(struct viface* self, char* stat, uint64_t* result)
 {
@@ -1548,7 +1577,7 @@ int viface_dispatch(struct viface* self, int num_ifaces, struct viface** ifaces,
 
             // Dispatch packet
             bool result_callback = false;
-            if (callback(pair, name, id, packet, &result_callback) ==
+            if (callback(pair, packet, &result_callback) ==
                 EXIT_FAILURE) {
                 return EXIT_FAILURE;
             }

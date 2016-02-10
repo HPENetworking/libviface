@@ -37,9 +37,10 @@ int count = 0;
 // Prints the network interface statistics values
 int print_statistics(struct viface* self, char** stats_names)
 {
-    int i = 0;
+    int i = 1;
+    int number_statistics = atoi(stats_names[0]);
 
-    for (i = 0; i < 23; i++) {
+    for (i = 1; i <= number_statistics; i++) {
         uint64_t result_key;
         if (viface_read_stat(self, stats_names[i],
                              &result_key) == EXIT_FAILURE) {
@@ -101,8 +102,9 @@ int check_statistics(struct viface* self)
 
     // Clears statistics
     printf("--- Clearing statistics:\n");
+    int number_statistics = atoi(stats_names[0]);
 
-    for (i = 0; i < 23; i++) {
+    for (i = 1; i <= number_statistics; i++) {
         uint64_t result_key;
 
         if ((viface_clear_stat(self, stats_names[i]) == EXIT_FAILURE) ||

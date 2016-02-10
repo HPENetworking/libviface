@@ -104,15 +104,13 @@ static apr_pool_t* TEMPORAL_POOL = NULL;
  * Dispatch callback type to handle packet reception.
  *
  * @param[in]  viface struct containing its state.
- * @param[in]  name Name of the virtual interface that received the packet.
- * @param[in]  id Numeric ID assigned to the virtual interface.
  * @param[in]  packet Packet (if tun) or frame (if tap) as a binary blob
  *             (array of bytes).
  * @param[out] true if the dispatcher should continue processing or false to stop.
  *
  * @return status indicating if an error happened or not.
  */
-typedef int (*dispatcher_cb)(struct viface* self, char* name, uint id,
+typedef int (*dispatcher_cb)(struct viface* self,
                              uint8_t* packet, bool* result);
 
 /*= Utilities ================================================================*/
