@@ -2,7 +2,7 @@ package main
 
 import (
     "fmt"
-    "wrapper"
+    "vifacego"
 )
 
 // Viface configuration data
@@ -26,24 +26,24 @@ var packet = []uint8 {
 var count = 0
 
 // printStatistics Prints the network interface statistics values
-func printStatistics(self wrapper.Viface, statsNames []string) int {
+func printStatistics(self vifacego.Viface, statsNames []string) int {
     for i := 0; i < len(statsNames); i++ {
         var resultKey uint64
-        if (wrapper.VifaceReadStat(self, statsNames[i], &resultKey) ==
-            wrapper.ExitFailure) {
-            return wrapper.ExitFailure
+        if (vifacego.VifaceReadStat(self, statsNames[i], &resultKey) ==
+            vifacego.ExitFailure) {
+            return vifacego.ExitFailure
         }
         fmt.Printf("     %v : %v\n", statsNames[i], resultKey)
     }
 
     fmt.Printf("\n")
-    return wrapper.ExitSuccess
+    return vifacego.ExitSuccess
 }
 
 /* Shows the use of the interface statistics to read
  * the number of packets and bytes sent.
  */
-func checkStatistics(self wrapper.Viface) int {
+func checkStatistics(self vifacego.Viface) int {
     var numberPackets = 100
     var crc32 uint32
     var hexDump string
@@ -54,12 +54,12 @@ func checkStatistics(self wrapper.Viface) int {
     // Prints statistics before sending packets
     fmt.Printf("--- Statistics before sending packets:\n");
 
-    if ((wrapper.VifaceListStats(self, &statsNames) == wrapper.ExitFailure) ||
-        (printStatistics(self, statsNames) == wrapper.ExitFailure) ||
-        (wrapper.VifaceCrc32(packet, &crc32) == wrapper.ExitFailure) ||
-        (wrapper.VifaceHexDump(self, packet, &hexDump) ==
-            wrapper.ExitFailure)) {
-        return wrapper.ExitFailure
+    if ((vifacego.VifaceListStats(self, &statsNames) == vifacego.ExitFailure) ||
+        (printStatistics(self, statsNames) == vifacego.ExitFailure) ||
+        (vifacego.VifaceCrc32(packet, &crc32) == vifacego.ExitFailure) ||
+        (vifacego.VifaceHexDump(self, packet, &hexDump) ==
+            vifacego.ExitFailure)) {
+        return vifacego.ExitFailure
     }
 
     fmt.Printf("--- About to send the following packet.\n")
@@ -75,16 +75,16 @@ func checkStatistics(self wrapper.Viface) int {
             fmt.Printf("\n")
         }
         fmt.Printf(" #%.2d ...", i + 1)
-        if (wrapper.VifaceSend(self, packet) == wrapper.ExitFailure) {
-            return wrapper.ExitFailure
+        if (vifacego.VifaceSend(self, packet) == vifacego.ExitFailure) {
+            return vifacego.ExitFailure
         }
     }
     fmt.Printf("\n\n")
 
     // Prints statistics after sending packets
     fmt.Printf("--- Statistics after sending packets:\n");
-    if (printStatistics(self, statsNames) == wrapper.ExitFailure) {
-        return wrapper.ExitFailure;
+    if (printStatistics(self, statsNames) == vifacego.ExitFailure) {
+        return vifacego.ExitFailure;
     }
 
     // Clears statistics
@@ -93,16 +93,16 @@ func checkStatistics(self wrapper.Viface) int {
     for i := 0; i < 23; i++ {
        var resultKey uint64
 
-        if ((wrapper.VifaceClearStat(self, statsNames[i]) ==
-            wrapper.ExitFailure) ||
-            (wrapper.VifaceReadStat(self, statsNames[i], &resultKey) ==
-                wrapper.ExitFailure)) {
-            return wrapper.ExitFailure
+        if ((vifacego.VifaceClearStat(self, statsNames[i]) ==
+            vifacego.ExitFailure) ||
+            (vifacego.VifaceReadStat(self, statsNames[i], &resultKey) ==
+                vifacego.ExitFailure)) {
+            return vifacego.ExitFailure
         }
         fmt.Printf("     %v : %v\n", statsNames[i], resultKey)
     }
     fmt.Printf("\n")
-    return wrapper.ExitSuccess
+    return vifacego.ExitSuccess
 }
 
 // main This example shows the use of the interface statistics interface
@@ -112,7 +112,7 @@ func main() {
     fmt.Printf("\n--- Starting stats example...\n\n")
 
     // Creates viface struct
-    var self = wrapper.CreateVifaceStruct()
+    var self = vifacego.CreateVifaceStruct()
 
     /* These IF statements do the following:
      * 1) Creates interface
@@ -120,14 +120,14 @@ func main() {
      * 3) Checks interface statistics
      * 4) Brings-down interface
      */
-    if ((wrapper.VifaceCreateGlobalPool() == wrapper.ExitFailure) ||
-        (wrapper.VifaceCreateViface(name, true, 0, &self) ==
-            wrapper.ExitFailure) ||
-        (wrapper.VifaceUp(self) == wrapper.ExitFailure) ||
-        (checkStatistics(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceDown(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceDestroyViface(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceDestroyGlobalPool() == wrapper.ExitFailure)) {
+    if ((vifacego.VifaceCreateGlobalPool() == vifacego.ExitFailure) ||
+        (vifacego.VifaceCreateViface(name, true, 0, &self) ==
+            vifacego.ExitFailure) ||
+        (vifacego.VifaceUp(self) == vifacego.ExitFailure) ||
+        (checkStatistics(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceDown(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceDestroyViface(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceDestroyGlobalPool() == vifacego.ExitFailure)) {
         fmt.Printf("--- An error occurred executing stats GO example\n")
     }
 }

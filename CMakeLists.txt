@@ -105,6 +105,13 @@ install(
     "${CMAKE_INSTALL_INCLUDEDIR}/viface"
 )
 
+# Creates a symbolic link of the shared library
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/build/src/libviface.so.1.1.0 /usr/lib/
+    COMMENT "Generating symbolic link to ${PROJECT_NAME} library"
+)
+
 # Add API Reference generation
 find_package(Doxygen)
 if(DOXYGEN_FOUND)

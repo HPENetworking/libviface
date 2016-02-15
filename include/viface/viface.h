@@ -23,6 +23,7 @@
 
 #ifndef _VIFACE_H
 #define _VIFACE_H
+#define UNUSED_VAR __attribute__ ((unused))
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,13 +93,14 @@ struct viface
 };
 
 // Vifaces sequencial identifier number
-static uint ID_SEQ = 0;
+UNUSED_VAR static uint ID_SEQ = 0;
 
 // APR parent pool
-static apr_pool_t* PARENT_POOL = NULL;
+UNUSED_VAR static apr_pool_t* PARENT_POOL = NULL;
 
 // APR temporal pool
-static apr_pool_t* TEMPORAL_POOL = NULL;
+UNUSED_VAR static apr_pool_t* TEMPORAL_POOL = NULL;
+
 
 /**
  * Dispatch callback type to handle packet reception.

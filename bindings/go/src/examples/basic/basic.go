@@ -2,7 +2,7 @@ package main
 
 import (
     "fmt"
-    "wrapper"
+    "vifacego"
 )
 
 // Viface configuration data
@@ -18,24 +18,25 @@ var mtu uint = 1500 //Default value if not set
 
 // setInterfaceConfiguration Sets network configuration data
 // (name, id, ip, mac, netmask, broadcast, mtu).
-func setInterfaceConfiguration(self wrapper.Viface) int {
+func setInterfaceConfiguration(self vifacego.Viface) int {
     // Configures interface
-    if ((wrapper.VifaceSetIpv4(self, ipv4) == wrapper.ExitFailure) ||
-        (wrapper.VifaceSetMac(self, mac) == wrapper.ExitFailure) ||
-        (wrapper.VifaceSetIpv4Broadcast(self,broadcast) ==
-            wrapper.ExitFailure) ||
-        (wrapper.VifaceSetIpv4Netmask(self, netmask) == wrapper.ExitFailure) ||
-        (wrapper.VifaceSetIpv6(self, len(ipv6s), ipv6s) ==
-            wrapper.ExitFailure)) {
-        return wrapper.ExitFailure
+    if ((vifacego.VifaceSetIpv4(self, ipv4) == vifacego.ExitFailure) ||
+        (vifacego.VifaceSetMac(self, mac) == vifacego.ExitFailure) ||
+        (vifacego.VifaceSetIpv4Broadcast(self,broadcast) ==
+            vifacego.ExitFailure) ||
+        (vifacego.VifaceSetIpv4Netmask(self, netmask) ==
+            vifacego.ExitFailure) ||
+        (vifacego.VifaceSetIpv6(self, len(ipv6s), ipv6s) ==
+            vifacego.ExitFailure)) {
+        return vifacego.ExitFailure
     }
 
-    return wrapper.ExitSuccess;
+    return vifacego.ExitSuccess;
 }
 
 // checkInterfaceConfiguration Checks the interface configuration data
 // (name, id, ip, mac, netmask, broadcast, mtu).
-func checkInterfaceConfiguration(self wrapper.Viface) int {
+func checkInterfaceConfiguration(self vifacego.Viface) int {
     var idValue uint
     var vifaceUp bool
     var mtuValue uint
@@ -47,18 +48,18 @@ func checkInterfaceConfiguration(self wrapper.Viface) int {
     var ipv6sValues []string
 
     // Gets interface configuration data
-    if ((wrapper.VifaceGetName(self, &vifaceName) == wrapper.ExitFailure) ||
-        (wrapper.VifaceGetID(self, &idValue) == wrapper.ExitFailure) ||
-        (wrapper.VifaceIsUp(self, &vifaceUp) == wrapper.ExitFailure) ||
-        (wrapper.VifaceGetIpv4(self, &ipValue) == wrapper.ExitFailure) ||
-        (wrapper.VifaceGetMac(self, &macValue) == wrapper.ExitFailure) ||
-        (wrapper.VifaceGetIpv4Broadcast(self, &broadcastValue) ==
-            wrapper.ExitFailure) ||
-        (wrapper.VifaceGetIpv4Netmask(self, &netmaskValue) ==
-            wrapper.ExitFailure) ||
-        (wrapper.VifaceGetMtu(self, &mtuValue) == wrapper.ExitFailure) ||
-        (wrapper.VifaceGetIpv6(self, &ipv6sValues) == wrapper.ExitFailure)) {
-        return wrapper.ExitFailure
+    if ((vifacego.VifaceGetName(self, &vifaceName) == vifacego.ExitFailure) ||
+        (vifacego.VifaceGetID(self, &idValue) == vifacego.ExitFailure) ||
+        (vifacego.VifaceIsUp(self, &vifaceUp) == vifacego.ExitFailure) ||
+        (vifacego.VifaceGetIpv4(self, &ipValue) == vifacego.ExitFailure) ||
+        (vifacego.VifaceGetMac(self, &macValue) == vifacego.ExitFailure) ||
+        (vifacego.VifaceGetIpv4Broadcast(self, &broadcastValue) ==
+            vifacego.ExitFailure) ||
+        (vifacego.VifaceGetIpv4Netmask(self, &netmaskValue) ==
+            vifacego.ExitFailure) ||
+        (vifacego.VifaceGetMtu(self, &mtuValue) == vifacego.ExitFailure) ||
+        (vifacego.VifaceGetIpv6(self, &ipv6sValues) == vifacego.ExitFailure)) {
+        return vifacego.ExitFailure
     }
 
     fmt.Printf("********** Viface Configuration Data **********\n\n");
@@ -103,21 +104,21 @@ func checkInterfaceConfiguration(self wrapper.Viface) int {
     }
     fmt.Printf("\n");
 
-    return wrapper.ExitSuccess
+    return vifacego.ExitSuccess
 }
 
 // checkInterfaceIsDown Checks if the network interface is down
-func checkInterfaceIsDown(self wrapper.Viface) int {
+func checkInterfaceIsDown(self vifacego.Viface) int {
     // Checks if interface is down
     var isDown bool
 
-    if (wrapper.VifaceIsUp(self, &isDown) == wrapper.ExitFailure) {
-        return wrapper.ExitFailure;
+    if (vifacego.VifaceIsUp(self, &isDown) == vifacego.ExitFailure) {
+        return vifacego.ExitFailure;
     }
 
     fmt.Printf("--- Interface is still Up: %v\n", isDown);
     fmt.Printf("    Expected:              false\n\n");
-    return wrapper.ExitSuccess;
+    return vifacego.ExitSuccess;
 }
 
 
@@ -135,7 +136,7 @@ func main() {
     fmt.Printf("\n--- Starting basic GO example...\n\n")
 
     // Creates viface struct
-    var self = wrapper.CreateVifaceStruct()
+    var self = vifacego.CreateVifaceStruct()
 
     /* These IF statements do the following:
      * 1) Creates global parent APR pool
@@ -148,16 +149,16 @@ func main() {
      * 8) Destroys viface struct
      * 9) Destroys global APR pool
      */
-    if ((wrapper.VifaceCreateGlobalPool() == wrapper.ExitFailure) ||
-        (wrapper.VifaceCreateViface(name, true, id, &self) ==
-            wrapper.ExitFailure) ||
-        (setInterfaceConfiguration(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceUp(self) == wrapper.ExitFailure) ||
-        (checkInterfaceConfiguration(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceDown(self) == wrapper.ExitFailure) ||
-        (checkInterfaceIsDown(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceDestroyViface(self) == wrapper.ExitFailure) ||
-        (wrapper.VifaceDestroyGlobalPool() == wrapper.ExitFailure)) {
+    if ((vifacego.VifaceCreateGlobalPool() == vifacego.ExitFailure) ||
+        (vifacego.VifaceCreateViface(name, true, id, &self) ==
+            vifacego.ExitFailure) ||
+        (setInterfaceConfiguration(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceUp(self) == vifacego.ExitFailure) ||
+        (checkInterfaceConfiguration(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceDown(self) == vifacego.ExitFailure) ||
+        (checkInterfaceIsDown(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceDestroyViface(self) == vifacego.ExitFailure) ||
+        (vifacego.VifaceDestroyGlobalPool() == vifacego.ExitFailure)) {
         fmt.Printf("--- An error occurred executing basic GO example\n")
     }
 
