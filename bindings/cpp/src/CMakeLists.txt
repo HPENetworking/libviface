@@ -1,12 +1,12 @@
 # Define library name
-set(LIB_NAME "viface")
+set(LIB_NAME "vifacecpp")
 
 # Add libviface library to build
 add_library(${LIB_NAME} SHARED viface.cpp)
 
 # Set library version
 set_target_properties(
-    ${LIB_NAME} PROPERTIES VERSION ${libviface_VERSION_STRING}
+    ${LIB_NAME} PROPERTIES VERSION ${libvifacecpp_VERSION_STRING}
 )
 
 # Specify shared library install directory
@@ -16,3 +16,6 @@ install(
     DESTINATION
     "${CMAKE_INSTALL_LIBDIR}"
 )
+
+# Set dependency with the library target
+add_dependencies(${PROJECT_NAME} ${LIB_NAME})

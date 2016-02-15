@@ -4,8 +4,8 @@ DIR=$(dirname $0)
 
 # Uncrustify everything if no parameters are given
 if [ "$#" -eq 0 ]; then
-    find "${DIR}/../../include/" -type f -name \*.hpp -exec uncrustify -c "${DIR}/uncrustify.cfg" --no-backup {} +
-    find "${DIR}/../../src/" "${DIR}/../../examples/" "${DIR}/../../test/" -type f -name \*.cpp -exec uncrustify -c "${DIR}/uncrustify.cfg" --no-backup {} +
+    find "${DIR}/../../include/" -type f \( -name "*.h" -o -name "*.hpp" \) -exec uncrustify -c "${DIR}/uncrustify.cfg" --no-backup {} +
+    find "${DIR}/../../src/" "${DIR}/../../examples/" "${DIR}/../../test/" -type f \( -name "*.c" -o -name "*.cpp" \) -exec uncrustify -c "${DIR}/uncrustify.cfg" --no-backup {} +
     exit 0
 fi
 

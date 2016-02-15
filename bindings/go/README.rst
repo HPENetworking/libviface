@@ -1,50 +1,36 @@
 ==================================================================
-libviface : libviface C object oriented interface for managing and creating network interfaces.
+libvifacego : libviface GO wrapper for managing and creating network interfaces.
 ==================================================================
 
-``libviface`` is a small C library that allows to create and configure
-virtual network interfaces in Linux based Operating Systems.
+``libvifacego`` is a GOlang wrapper of the libviface C library that allows to create 
+and configure virtual network interfaces in Linux based Operating Systems.
 
 ::
 
-   #include "viface/viface.h"
+   import (
+	 "fmt"
+	 "vifacego" 
+   )
 
-    // Creates viface struct
-    struct viface *self;
+   // Creates viface struct
+   var self = wrapper.CreateVifaceStruct()
 
-    // Interface configuration data
-    char *name = "viface0";
-    char *ip = "192.168.25.46";
-    char* mac = "ec:f1:f8:d5:47:6b";
-    int id = 1;
+   // Viface configuration data
+   var name = "viface0"
+   var ipv4 = "192.168.25.46"
+   var id = 1
 
-    apr_initialize();
-
-    // Creates parent pool
-    apr_pool_t *parent_pool;
-    apr_pool_create(&parent_pool, NULL);
-
-    // Creates interface
-    if ((viface_create(&parent_pool, &self) == EXIT_FAILURE) ||
-        (vifaceImpl(&self, name, true, id) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
+   if ((wrapper.VifaceCreateGlobalPool() == wrapper.ExitFailure) ||
+       (wrapper.VifaceCreateViface(name, true, id, &self) == wrapper.ExitFailure) ||
+       (wrapper.VifaceSetIpv4(self, ipv4) == wrapper.ExitFailure)) {
+        fmt.Printf("--- An error occurred executing basic GO example\n")
     }
 
-    // Configures interface
-    if ((setIPv4(&self, ip) == EXIT_FAILURE) ||
-        (setMAC(&self, mac) == EXIT_FAILURE)) {
-        return EXIT_FAILURE;
-    }
- 
-   // Brings-up interface
-   if (up(&self) == EXIT_FAILURE) {
-	return EXIT_FAILURE;
-    }
 
-Then you can ``send()``, ``receive()`` or setup a ``dispath()`` callback to
+Then you can send ``VifaceSend()`` or receive ``VifaceReceive()`` to
 handle virtual interfaces incoming and outgoing packets. Also, interface
 statistics (rx/tx packets, bytes, etc) are available to read using
-``readStat()`` and related functions.
+``VifaceReadStat()`` and related functions.
 
 For a complete overview check the reference documentation and examples.
 
@@ -63,19 +49,24 @@ Dependencies
 
 ::
 
-   sudo apt-get install build-essential cmake doxygen graphviz
+   sudo apt-get install build-essential cmake golang
 
 
 Build
 =====
 
 ::
+   Set GOPATH env variable to the location where the libviface repository is
+   located at:
+
+   export GOPATH="libviface_directory_path"/bindings/go
+   export PATH=$PATH:$GOPATH/bin
 
    mkdir build
    cd build
    cmake ..
-   make
-   make doc
+   make libvifacego
+   make docgo
 
 
 Improvements
