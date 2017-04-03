@@ -533,10 +533,9 @@ void VIfaceImpl::setMTU(uint mtu)
 {
     ostringstream what;
 
-    // RFC 791, p. 24: "Every internet module must be able to forward a
-    // datagram of 68 octets without further fragmentation."
-    if (mtu < 68) {
-        what << "--- MTU " << mtu << " too small (< 68)." << endl;
+    if (mtu < ETH_HLEN) {
+        what << "--- MTU " << mtu << " too small (< " << ETH_HLEN << ").";
+        what << endl;
         throw invalid_argument(what.str());
     }
 
@@ -871,11 +870,9 @@ void VIfaceImpl::send(vector<uint8_t>& packet) const
     ostringstream what;
     int size = packet.size();
 
-    // RFC 791, p. 24: "Every internet module must be able to forward a
-    // datagram of 68 octets without further fragmentation."
-    if (size < 68) {
+    if (size < ETH_HLEN) {
         what << "--- Packet too small (" << size << ") ";
-        what << "too small (< 68)." << endl;
+        what << "too small (< " << ETH_HLEN << ")." << endl;
         throw invalid_argument(what.str());
     }
 
