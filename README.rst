@@ -2,8 +2,8 @@
 libviface : C++ bindings for Linux tun/tap and netdevice interface
 ==================================================================
 
-``libviface`` is a small C++11 library that allows to create and configure
-virtual network interfaces in Linux based Operating Systems.
+``libviface`` is a small C++11 library that allows to create (or hook to) and
+configure network interfaces in Linux based Operating Systems.
 
 ::
 
@@ -31,6 +31,7 @@ Features
 ========
 
 - Object Oriented approach to create virtual interfaces.
+- Can also hook to existing interfaces (real).
 - Multiple strategies for packet reception and emission.
 - Interface configuration API (MAC, Ipv4, IPv6, MTU).
 - Interface statistics reading and clearing.
@@ -70,7 +71,7 @@ License
 
 ::
 
-   Copyright (C) 2015 Hewlett Packard Enterprise Development LP
+   Copyright (C) 2015-2018 Hewlett Packard Enterprise Development LP
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
