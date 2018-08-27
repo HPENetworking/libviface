@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <functional>
 
 #include "viface/config.hpp"
 
