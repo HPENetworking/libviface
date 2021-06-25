@@ -70,6 +70,7 @@ endif(VIFACE_EXAMPLES)
 install(
     FILES
     "${libviface_SOURCE_DIR}/include/viface/viface.hpp"
+    "${libviface_SOURCE_DIR}/include/viface/utils.hpp"
     "${CMAKE_BINARY_DIR}/include/viface/config.hpp"
     DESTINATION
     "${CMAKE_INSTALL_INCLUDEDIR}/viface"
