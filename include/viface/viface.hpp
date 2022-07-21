@@ -309,6 +309,21 @@ class VIface
         std::vector<uint8_t> receive();
 
         /**
+         * Receive a packet from the virtual interface.
+         *
+         * Note: Receive a packet from a virtual interface means that another
+         * userspace program (or the kernel) sent a packet to the network
+         * interface with the name of the instance of this class. If not packet
+         * was available, and empty vector is returned.
+         *
+         * @param[in]  timeout epoll wait timeout, unit: millionseconds
+         *
+         * @return the packet (if tun) or frame (if tap) as a binary blob
+         *         (array of bytes).
+         */
+        std::vector<uint8_t> receive(int timeout);
+
+        /**
          * Send a packet to this virtual interface.
          *
          * Note: Sending a packet to this virtual interface means that it
