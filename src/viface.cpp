@@ -907,7 +907,7 @@ vector<uint8_t> VIfaceImpl::receive(int timeout)
     int ret = 0;
 
     ret = epoll_wait(m_epoll_fd, &wait_event, 1, timeout);
-    if (ret < 0) {
+    if ((ret < 0) && (errno != EINTR)) {
         ostringstream what;
         what << "--- epoll_wait fail.";
         what << endl;
