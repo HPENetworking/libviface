@@ -44,6 +44,7 @@
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <linux/if_arp.h>
+#include <sys/epoll.h>
 
 // Interfaces
 #include <ifaddrs.h>   // getifaddrs
@@ -77,6 +78,7 @@ class VIfaceImpl
         int kernel_socket;
         int kernel_socket_ipv6;
         vector<uint8_t> pktbuff;
+        int m_epoll_fd;
 
         string name;
         uint id;
@@ -150,6 +152,8 @@ class VIfaceImpl
         bool isUp() const;
 
         vector<uint8_t> receive();
+
+        vector<uint8_t> receive(int timeout);
 
         void send(vector<uint8_t>& packet) const;
 

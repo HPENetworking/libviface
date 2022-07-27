@@ -356,6 +356,41 @@ VIfaceImpl::VIfaceImpl(string name, bool tap, int id)
 
     this->queues = queues;
 
+    // epoll create
+    m_epoll_fd = epoll_create1(0);
+    if (m_epoll_fd == -1) {
+        ostringstream what;
+        what << "--- epoll_create1 fail.";
+        what << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    struct epoll_event ev = {
+        .events = EPOLLIN,
+        .data = { .fd = this->queues.rx },
+    };
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+        ostringstream what;
+        what << "--- epoll_ctl fail.";
+        what << "fd:" << ev.data.fd << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    ev.data.fd = this->queues.tx;
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1) {
+        ostringstream what;
+        what << "--- epoll_ctl fail.";
+        what << "fd:" << ev.data.fd << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
     // Create socket channels to the NET kernel for later ioctl
     this->kernel_socket = -1;
     this->kernel_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -865,6 +900,68 @@ vector<uint8_t> VIfaceImpl::receive()
     return packet;
 }
 
+vector<uint8_t> VIfaceImpl::receive(int timeout)
+{
+    int nread = 0;
+    struct epoll_event wait_event;
+    int ret = 0;
+
+    ret = epoll_wait(m_epoll_fd, &wait_event, 1, timeout);
+    if ((ret < 0) && (errno != EINTR)) {
+        ostringstream what;
+        what << "--- epoll_wait fail.";
+        what << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    if (ret == 0) {
+	return vector<uint8_t>(0);
+    }
+
+    if (ret > 0) {
+        // Read packet into our buffer
+        nread = read(wait_event.data.fd, &(this->pktbuff[0]), this->mtu);
+    }
+
+    // Handle errors
+    if (nread == -1) {
+        // Nothing was read for this fd (non-blocking).
+        // This could happen, as http://linux.die.net/man/2/select states:
+        //
+        //    Under Linux, select() may report a socket file descriptor as
+        //    "ready for reading", while nevertheless a subsequent read
+        //    blocks. This could for example happen when data has arrived
+        //    but upon examination has wrong checksum and is discarded.
+        //    There may be other circumstances in which a file descriptor
+        //    is spuriously reported as ready. Thus it may be safer to
+        //    use O_NONBLOCK on sockets that should not block.
+        //
+        // I know this is not a socket, but the "There may be other
+        // circumstances in which a file descriptor is spuriously reported
+        // as ready" warns it, and so, it better to do this that to have
+        // an application that frozes for no apparent reason.
+        //
+        if (errno == EAGAIN) {
+            return vector<uint8_t>(0);
+        }
+
+        // Something bad happened
+        ostringstream what;
+        what << "--- IO error while reading from " << this->name;
+        what << "." << endl;
+        what << "    Error: " << strerror(errno);
+        what << " (" << errno << ")." << endl;
+        throw runtime_error(what.str());
+    }
+
+    // Copy packet from buffer and return
+    vector<uint8_t> packet(nread);
+    packet.assign(&(this->pktbuff[0]), &(this->pktbuff[nread]));
+    return packet;
+}
+
 void VIfaceImpl::send(vector<uint8_t>& packet) const
 {
     ostringstream what;
@@ -1205,6 +1302,11 @@ bool VIface::isUp() const
 vector<uint8_t> VIface::receive()
 {
     return this->pimpl->receive();
+}
+
+vector<uint8_t> VIface::receive(int timeout)
+{
+    return this->pimpl->receive(timeout);
 }
 
 void VIface::send(vector<uint8_t>& packet) const
