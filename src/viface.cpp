@@ -916,6 +916,10 @@ vector<uint8_t> VIfaceImpl::receive(int timeout)
         throw runtime_error(what.str());
     }
 
+    if (ret == 0) {
+	return vector<uint8_t>(0);
+    }
+
     if (ret > 0) {
         // Read packet into our buffer
         nread = read(wait_event.data.fd, &(this->pktbuff[0]), this->mtu);
